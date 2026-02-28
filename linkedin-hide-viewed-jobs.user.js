@@ -17,8 +17,7 @@
 // @icon         https://www.linkedin.com/favicon.ico
 // @icon64       https://www.linkedin.com/favicon.ico
 // @match        https://www.linkedin.com/jobs/*
-// @match        https://www.linkedin.com/jobs/search/*
-// @match        https://www.linkedin.com/jobs/collections/*
+// @match        https://www.linkedin.com/jobs
 // @compatible   chrome Violentmonkey/Tampermonkey
 // @compatible   edge Violentmonkey/Tampermonkey
 // @compatible   firefox Violentmonkey/Tampermonkey
@@ -44,50 +43,8 @@
   const HIDDEN_CLASS = 'lhvj-hidden-by-script';
   const UI_ID = 'lhvj-toggle-root';
   const VIEWED_KEYWORDS = [
-    'viewed',
-    'seen',
-    'already viewed',
-    'already seen',
-    'görüntelenen',
-    'goruntulenen',
-    'görüntülendi',
-    'goruntulendi',
-    'goruldu',
-    'visto',
-    'visualizado',
-    'visualizada',
-    'visto recentemente',
-    'vu',
-    'deja vu',
-    'gesehen',
-    'bereits gesehen',
-    'visualizzato',
-    'visualizzata',
-    'bekeken',
-    'weergegeven',
-    'wyświetlono',
-    'obejrzane',
-    'просмотрено',
-    'просмотренные',
-    'переглянуто',
-    'переглянуті',
-    'مُشاهَد',
-    'تمت المشاهدة',
-    'נצפה',
-    '已查看',
-    '已看过',
-    '閲覧済み',
-    '確認済み',
-    '조회함',
-    '이미 본',
-    'telah dilihat',
-    'sudah dilihat',
-    'sudah ditonton',
-    'sudah melihat',
-    'sudah dilihat sebelumnya',
-    'sudah pernah dilihat',
-    'đã xem',
-    'देखा गया'
+    'Viewed',
+    'Görüntülenen',
   ];
   const JOB_CARD_SELECTORS = [
     'li[data-occludable-job-id]',
