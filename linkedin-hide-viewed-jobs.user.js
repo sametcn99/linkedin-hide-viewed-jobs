@@ -1,10 +1,30 @@
 // ==UserScript==
 // @name         LinkedIn Hide Viewed Jobs
 // @name:tr      LinkedIn Goruntulenen Ilanlari Gizle
+// @name:es      LinkedIn Ocultar Empleos Vistos
+// @name:de      LinkedIn Angesehene Jobs Ausblenden
+// @name:fr      LinkedIn Masquer Les Offres Consultees
+// @name:pt      LinkedIn Ocultar Vagas Visualizadas
+// @name:it      LinkedIn Nascondi Annunci Visualizzati
+// @name:ru      LinkedIn Скрыть Просмотренные Вакансии
+// @name:ja      LinkedIn 閲覧済み求人を非表示
+// @name:ko      LinkedIn 확인한 채용 공고 숨기기
+// @name:zh-CN   LinkedIn 隐藏已查看职位
+// @name:ar      لينكدإن إخفاء الوظائف التي تمت مشاهدتها
 // @namespace    https://github.com/sametcn99
-// @version      1.0.1
+// @version      1.0.2
 // @description  Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
+// @description:es Oculta tarjetas de empleo vistas en LinkedIn Jobs, agrega una insignia compacta y arrastrable, y te permite mostrar los elementos ocultos cuando quieras.
+// @description:de Blendet angesehene Jobkarten auf LinkedIn Jobs aus, fuegt ein kompaktes verschiebbares Badge hinzu und laesst dich ausgeblendete Eintraege jederzeit wieder anzeigen.
+// @description:fr Masque les fiches d'emploi consultees sur LinkedIn Jobs, ajoute un badge compact deplacable et vous permet de reafficher les elements masques a tout moment.
+// @description:pt Oculta cartoes de vagas visualizadas no LinkedIn Jobs, adiciona um selo compacto arrastavel e permite revelar itens ocultos a qualquer momento.
+// @description:it Nasconde le schede delle offerte gia visualizzate su LinkedIn Jobs, aggiunge un badge compatto trascinabile e consente di mostrare di nuovo gli elementi nascosti in qualsiasi momento.
+// @description:ru Скрывает просмотренные карточки вакансий в LinkedIn Jobs, добавляет компактный перетаскиваемый бейдж и позволяет в любой момент снова показать скрытые элементы.
+// @description:ja LinkedIn Jobsで閲覧済みの求人カードを非表示にし、コンパクトでドラッグ可能なバッジを追加して、非表示項目をいつでも再表示できます。
+// @description:ko LinkedIn Jobs 페이지에서 확인한 채용 카드들을 숨기고, 작고 드래그 가능한 배지를 추가하며, 숨긴 항목을 언제든 다시 표시할 수 있습니다.
+// @description:zh-CN 在 LinkedIn 职位页面隐藏已查看职位卡片，添加可拖动的紧凑徽章，并可随时重新显示已隐藏项目。
+// @description:ar يخفي بطاقات الوظائف التي تمت مشاهدتها في صفحات وظائف لينكدإن، ويضيف شارة مدمجة قابلة للسحب، ويتيح لك إظهار العناصر المخفية في أي وقت.
 // @source       https://github.com/sametcn99/linkedin-hide-viewed-jobs
 // @website      https://github.com/sametcn99/linkedin-hide-viewed-jobs
 // @author       sametcn99
@@ -42,13 +62,88 @@
   const HIDDEN_CLASS = 'lhvj-hidden-by-script';
   const UI_ID = 'lhvj-toggle-root';
   const VIEWED_KEYWORDS = [
+    // English
     'Viewed',
+    'Seen',
+    'Applied',
+
+    // Turkish
     'Görüntülenen',
     'Görüntülendi',
-    'Applied',
     'Başvurulan',
     'Başvurulanlar',
     'Başvuruldu',
+
+    // Spanish
+    'Visto',
+    'Vistos',
+    'Aplicado',
+    'Postulado',
+
+    // Portuguese
+    'Visualizado',
+    'Visualizados',
+    'Candidatado',
+    'Candidatura',
+
+    // French
+    'Vu',
+    'Vue',
+    'Postulé',
+    'Postulée',
+    'Candidature',
+
+    // German
+    'Angesehen',
+    'Gesehen',
+    'Beworben',
+
+    // Italian
+    'Visualizzato',
+    'Visto',
+    'Candidata',
+    'Candidati',
+    'Candidatura',
+
+    // Dutch
+    'Bekeken',
+    'Solliciteerd',
+
+    // Russian
+    'Просмотрено',
+    'Откликнулся',
+
+    // Polish
+    'Wyświetlono',
+    'Aplikowano',
+
+    // Swedish
+    'Visad',
+    'Sedd',
+    'Sökt',
+
+    // Chinese (Simplified / Traditional)
+    '已查看',
+    '已申请',
+    '已檢視',
+    '已申請',
+
+    // Japanese
+    '閲覧済み',
+    '応募済み',
+
+    // Korean
+    '조회됨',
+    '지원함',
+    '지원 완료',
+
+    // Arabic
+    'تمت المشاهدة',
+    'تم التقديم',
+
+    // Hindi
+    'देखा गया',
+    'आवेदन किया गया'
   ];
   const JOB_CARD_SELECTORS = [
     '[data-occludable-job-id]',

@@ -50,6 +50,27 @@ Alternative:
 - Install directly from `@downloadURL`:
 - `https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main/linkedin-hide-viewed-jobs.user.js`
 
+## Supported Languages
+
+The script supports detection for the following languages:
+
+- English (Viewed, Seen, Applied)
+- Turkish (Görüntülenen, Görüntülendi, Başvurulan, Başvurulanlar, Başvuruldu)
+- Spanish (Visto, Vistos, Aplicado, Postulado)
+- Portuguese (Visualizado, Visualizados, Candidatado, Candidatura)
+- French (Vu, Vue, Postulé, Postulée, Candidature)
+- German (Angesehen, Gesehen, Beworben)
+- Italian (Visualizzato, Visto, Candidata, Candidati, Candidatura)
+- Dutch (Bekeken, Solliciteerd)
+- Russian (Просмотрено, Откликнулся)
+- Polish (Wyświetlono, Aplikowano)
+- Swedish (Visad, Sedd, Sökt)
+- Chinese (已查看, 已申请, 已檢視, 已申請)
+- Japanese (閲覧済み, 応募済み)
+- Korean (조회됨, 지원함, 지원 완료)
+- Arabic (تمت المشاهدة, تم التقديم)
+- Hindi (देखा गया, आवेदन किया गया)
+
 ## Usage
 
 1. Open a LinkedIn Jobs listing page.
@@ -110,6 +131,6 @@ Guidelines:
 
 ## Project Links
 
-- Repository: `https://github.com/sametcn99/linkedin-hide-viewed-jobs`
-- Issues: `https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues`
-- Greasy Fork: `https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs`
+- Repository: [https://github.com/sametcn99/linkedin-hide-viewed-jobs](https://github.com/sametcn99/linkedin-hide-viewed-jobs)
+- Issues: [https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues](https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues)
+- Greasy Fork: [https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs](https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs)
