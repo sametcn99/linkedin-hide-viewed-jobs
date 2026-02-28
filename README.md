@@ -23,7 +23,6 @@ The script shows a compact badge at the top-right of the page:
 - Uses `MutationObserver` for infinite scroll and dynamic content
 - Adds periodic refresh (`setInterval`) as an additional safety layer
 - Multilingual `viewed` keyword support
-- Light and dark theme compatible UI
 
 ## Supported Pages
 
