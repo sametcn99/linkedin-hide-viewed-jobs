@@ -8,6 +8,10 @@ The script shows a compact badge at the top-right of the page:
 - viewed/hidden job counter
 - draggable badge positioning
 
+## Screenshot
+
+![Screenshot of the badge and hidden jobs](screenshot.png)
+
 ## Features
 
 - Automatically detects and hides viewed job cards

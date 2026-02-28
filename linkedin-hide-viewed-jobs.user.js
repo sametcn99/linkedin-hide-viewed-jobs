@@ -9,6 +9,7 @@
 // @website      https://github.com/sametcn99/linkedin-hide-viewed-jobs
 // @author       sametcn99
 // @copyright    2026, sametcn99
+// @license      MIT
 // @homepageURL  https://github.com/sametcn99/linkedin-hide-viewed-jobs
 // @supportURL   https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues
 // @downloadURL  https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main/linkedin-hide-viewed-jobs.user.js
