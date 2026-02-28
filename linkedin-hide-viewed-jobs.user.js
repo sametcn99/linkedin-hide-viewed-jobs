@@ -45,6 +45,9 @@
     'Viewed',
     'Görüntülenen',
     'Görüntülendi',
+    'Applied',
+    'Başvurulan',
+    'Başvurulanlar',
   ];
   const JOB_CARD_SELECTORS = [
     '[data-occludable-job-id]',
