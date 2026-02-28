@@ -2,7 +2,7 @@
 // @name         LinkedIn Hide Viewed Jobs
 // @name:tr      LinkedIn Goruntulenen Ilanlari Gizle
 // @namespace    https://github.com/sametcn99
-// @version      1.0.0
+// @version      1.0.1
 // @description  Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
 // @source       https://github.com/sametcn99/linkedin-hide-viewed-jobs
@@ -16,8 +16,7 @@
 // @updateURL    https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main/linkedin-hide-viewed-jobs.user.js
 // @icon         https://www.linkedin.com/favicon.ico
 // @icon64       https://www.linkedin.com/favicon.ico
-// @match        https://www.linkedin.com/jobs/*
-// @match        https://www.linkedin.com/jobs
+// @match        https://www.linkedin.com/*
 // @compatible   chrome Violentmonkey/Tampermonkey
 // @compatible   edge Violentmonkey/Tampermonkey
 // @compatible   firefox Violentmonkey/Tampermonkey
@@ -45,8 +44,10 @@
   const VIEWED_KEYWORDS = [
     'Viewed',
     'Görüntülenen',
+    'Görüntülendi',
   ];
   const JOB_CARD_SELECTORS = [
+    '[data-occludable-job-id]',
     'li[data-occludable-job-id]',
     'li.jobs-search-results__list-item',
     'li.scaffold-layout__list-item'
@@ -61,6 +62,8 @@
   let hiddenCount = 0;
   let rafId = 0;
   let isDragging = false;
+  let routeRefreshBurstId = 0;
+  let lastRouteChangeAt = Date.now();
 
   function injectStyles() {
     if (document.getElementById('lhvj-style')) {
@@ -77,10 +80,10 @@
       '  right: 16px;',
       '  z-index: 99999;',
       '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;',
-      '  background: #ffffff;',
+      '  background: #1d2226;',
       '  border-radius: 999px;',
-      '  border: 1px solid rgba(0, 0, 0, 0.15);',
-      '  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);',
+      '  border: 1px solid rgba(255, 255, 255, 0.15);',
+      '  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);',
       '  display: inline-flex;',
       '  align-items: center;',
       '  height: 32px;',
@@ -89,7 +92,7 @@
       '  transition: box-shadow 0.15s ease;',
       '}',
       `#${UI_ID}:hover {`,
-      '  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.07);',
+      '  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35);',
       '}',
       `#${UI_ID}.lhvj-dragging {`,
       '  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);',
@@ -101,13 +104,13 @@
       '  width: 28px;',
       '  height: 100%;',
       '  cursor: grab;',
-      '  border-right: 1px solid rgba(0, 0, 0, 0.08);',
-      '  color: #b0b7bf;',
+      '  border-right: 1px solid rgba(255, 255, 255, 0.08);',
+      '  color: #3d4449;',
       '  flex-shrink: 0;',
       '  transition: color 0.15s ease;',
       '}',
       `#${UI_ID} .lhvj-drag-handle:hover {`,
-      '  color: #5e5e5e;',
+      '  color: #9aa4ae;',
       '}',
       `#${UI_ID} .lhvj-drag-handle::before {`,
       '  content: "";',
@@ -135,13 +138,13 @@
       '  font-size: 13px;',
       '  font-weight: 600;',
       '  line-height: 1;',
-      '  color: #1d2124;',
+      '  color: #e7e9ea;',
       '}',
       `#${UI_ID} .lhvj-count-unit {`,
       '  font-size: 11px;',
       '  font-weight: 400;',
       '  line-height: 1;',
-      '  color: #666666;',
+      '  color: #9aa4ae;',
       '}',
       `#${UI_ID} .lhvj-state {`,
       '  display: inline-flex;',
@@ -155,12 +158,12 @@
       '  letter-spacing: 0.3px;',
       '  line-height: 1;',
       '  text-align: center;',
-      '  background: #f3f2ef;',
-      '  color: #5e5e5e;',
+      '  background: rgba(255, 255, 255, 0.1);',
+      '  color: #c9d1d9;',
       '}',
       `#${UI_ID}[data-show-hidden="1"] .lhvj-state {`,
-      '  background: #e8f3ff;',
-      '  color: #0a66c2;',
+      '  background: rgba(112, 181, 249, 0.2);',
+      '  color: #9fd0ff;',
       '}',
       `#${UI_ID} input[type="checkbox"] {`,
       '  appearance: none;',
@@ -169,7 +172,7 @@
       '  margin: 0;',
       '  padding: 0;',
       '  border-radius: 999px;',
-      '  background: #c2c8cf;',
+      '  background: #4d5661;',
       '  position: absolute;',
       '  opacity: 0;',
       '  outline: none;',
@@ -192,49 +195,14 @@
       '  transition: transform 0.2s ease;',
       '}',
       `#${UI_ID} input[type="checkbox"]:checked {`,
-      '  background: #0a66c2;',
+      '  background: #70b5f9;',
       '}',
       `#${UI_ID} input[type="checkbox"]:checked::after {`,
       '  transform: translateX(14px);',
       '}',
       `#${UI_ID} input[type="checkbox"]:focus-visible {`,
-      '  outline: 2px solid #0a66c2;',
+      '  outline: 2px solid #70b5f9;',
       '  outline-offset: 2px;',
-      '}',
-      `html.theme--dark #${UI_ID} {`,
-      '  background: #1d2226;',
-      '  border-color: rgba(255, 255, 255, 0.15);',
-      '  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);',
-      '}',
-      `html.theme--dark #${UI_ID}:hover {`,
-      '  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35);',
-      '}',
-      `html.theme--dark #${UI_ID} .lhvj-drag-handle {`,
-      '  border-right-color: rgba(255, 255, 255, 0.08);',
-      '  color: #3d4449;',
-      '}',
-      `html.theme--dark #${UI_ID} .lhvj-drag-handle:hover {`,
-      '  color: #9aa4ae;',
-      '}',
-      `html.theme--dark #${UI_ID} .lhvj-count-num {`,
-      '  color: #e7e9ea;',
-      '}',
-      `html.theme--dark #${UI_ID} .lhvj-count-unit {`,
-      '  color: #9aa4ae;',
-      '}',
-      `html.theme--dark #${UI_ID} .lhvj-state {`,
-      '  background: rgba(255, 255, 255, 0.1);',
-      '  color: #c9d1d9;',
-      '}',
-      `html.theme--dark #${UI_ID}[data-show-hidden="1"] .lhvj-state {`,
-      '  background: rgba(112, 181, 249, 0.2);',
-      '  color: #9fd0ff;',
-      '}',
-      `html.theme--dark #${UI_ID} input[type="checkbox"] {`,
-      '  background: #4d5661;',
-      '}',
-      `html.theme--dark #${UI_ID} input[type="checkbox"]:checked {`,
-      '  background: #70b5f9;',
       '}',
       '@media (max-width: 900px) {',
       `  #${UI_ID} {`,
@@ -445,9 +413,9 @@
         return;
       }
 
-      const card = node.matches('li[data-occludable-job-id]')
+      const card = node.matches('[data-occludable-job-id]')
         ? node
-        : node.closest('li[data-occludable-job-id]');
+        : node.closest('[data-occludable-job-id]');
 
       if (card) {
         cardSet.add(card);
@@ -560,8 +528,174 @@
     }
   }
 
+  function isViewedAnchor(anchor) {
+    const text = (anchor.textContent || '').trim();
+    const aria = anchor.getAttribute('aria-label') || '';
+    const title = anchor.getAttribute('title') || '';
+
+    if (hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title)) {
+      return true;
+    }
+
+    const descendants = anchor.querySelectorAll('[aria-label], [title]');
+    for (let i = 0; i < descendants.length; i += 1) {
+      const node = descendants[i];
+      const childAria = node.getAttribute('aria-label') || '';
+      const childTitle = node.getAttribute('title') || '';
+      const childText = (node.textContent || '').trim();
+
+      if (hasViewedKeyword(childText) || hasViewedKeyword(childAria) || hasViewedKeyword(childTitle)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function applyAnchorVisibility(anchor, shouldHide) {
+    if (shouldHide) {
+      anchor.classList.add(HIDDEN_CLASS);
+      anchor.setAttribute('data-lhvj-hidden-anchor', '1');
+    } else {
+      anchor.classList.remove(HIDDEN_CLASS);
+      anchor.removeAttribute('data-lhvj-hidden-anchor');
+    }
+  }
+
+  function isJobsHomePage() {
+    return location.pathname === '/jobs' || location.pathname === '/jobs/';
+  }
+
+  function restoreHiddenAnchors() {
+    document.querySelectorAll('a[data-lhvj-hidden-anchor="1"]').forEach(function (node) {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+
+      applyAnchorVisibility(node, false);
+    });
+  }
+
+  function refreshViewedAnchors() {
+    let viewedAnchorCount = 0;
+
+    // Anchor-based keyword scan is intentionally limited to jobs home.
+    if (!isJobsHomePage()) {
+      restoreHiddenAnchors();
+      return viewedAnchorCount;
+    }
+
+    document.querySelectorAll('a').forEach(function (node) {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+
+      const viewed = isViewedAnchor(node);
+      const hiddenByScript = node.getAttribute('data-lhvj-hidden-anchor') === '1';
+
+      if (viewed) {
+        viewedAnchorCount += 1;
+      }
+
+      if (viewed || hiddenByScript) {
+        applyAnchorVisibility(node, viewed && showHidden);
+      }
+    });
+
+    return viewedAnchorCount;
+  }
+
+  function getHomeCardFromViewedMarker(node) {
+    if (!(node instanceof HTMLElement)) {
+      return null;
+    }
+
+    const card = node.closest('[data-occludable-job-id], li.scaffold-layout__list-item, .job-card-container, .job-card-list');
+    return card instanceof HTMLElement ? card : null;
+  }
+
+  function refreshJobsHomeViewedCardsFallback() {
+    const viewedHomeCards = new Set();
+
+    if (!isJobsHomePage()) {
+      return viewedHomeCards;
+    }
+
+    const selector = VIEWED_MARKER_SELECTORS.join(',');
+    document.querySelectorAll(selector).forEach(function (node) {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+
+      const text = (node.textContent || '').trim();
+      const aria = node.getAttribute('aria-label') || '';
+      const title = node.getAttribute('title') || '';
+      if (!(hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title))) {
+        return;
+      }
+
+      const card = getHomeCardFromViewedMarker(node);
+      if (!card) {
+        return;
+      }
+
+      viewedHomeCards.add(card);
+      applyVisibility(card, showHidden);
+    });
+
+    return viewedHomeCards;
+  }
+
+  function isJobsPath(pathname) {
+    return pathname === '/jobs' || pathname.indexOf('/jobs/') === 0;
+  }
+
+  function isJobsPage() {
+    return isJobsPath(location.pathname);
+  }
+
+  function removeUi() {
+    const root = document.getElementById(UI_ID);
+    if (root) {
+      root.remove();
+    }
+  }
+
+  function startRouteRefreshBurst() {
+    let ticks = 0;
+
+    if (routeRefreshBurstId) {
+      clearInterval(routeRefreshBurstId);
+      routeRefreshBurstId = 0;
+    }
+
+    // LinkedIn can populate cards progressively after navigation.
+    routeRefreshBurstId = setInterval(function () {
+      ticks += 1;
+      scheduleRefresh();
+
+      if (ticks >= 12 || !isJobsPage()) {
+        clearInterval(routeRefreshBurstId);
+        routeRefreshBurstId = 0;
+      }
+    }, 250);
+  }
+
   function refresh() {
+    if (!isJobsPage()) {
+      hiddenCount = 0;
+      removeUi();
+      return;
+    }
+
     const cards = getJobCards();
+
+    // Retry briefly after navigation because LinkedIn can render cards lazily.
+    if (cards.length === 0 && Date.now() - lastRouteChangeAt < 8000) {
+      setTimeout(scheduleRefresh, 180);
+      setTimeout(scheduleRefresh, 600);
+    }
+
     const viewedCardsFromMarkers = getViewedCardsFromMarkers();
     const viewedCards = new Set(viewedCardsFromMarkers);
 
@@ -582,6 +716,13 @@
 
       applyVisibility(card, viewed && showHidden);
     });
+
+    const viewedAnchorCount = refreshViewedAnchors();
+    const viewedHomeCardsFallback = refreshJobsHomeViewedCardsFallback();
+
+    // On /jobs home, viewed state can be present in anchors even when card markers are missing.
+    // Keep the larger count so the badge stays in sync with what is actually hidden/viewed.
+    hiddenCount = Math.max(hiddenCount, viewedAnchorCount, viewedHomeCardsFallback.size);
 
     updateUiCount();
   }
@@ -609,20 +750,54 @@
     });
   }
 
+  function observeRouteChanges() {
+    let lastUrl = location.href;
+
+    function onLocationMaybeChanged() {
+      const currentUrl = location.href;
+      if (currentUrl === lastUrl) {
+        return;
+      }
+
+      lastUrl = currentUrl;
+      lastRouteChangeAt = Date.now();
+
+      // LinkedIn often paints list items after route change callbacks.
+      scheduleRefresh();
+      setTimeout(scheduleRefresh, 120);
+      setTimeout(scheduleRefresh, 420);
+
+      if (isJobsPage()) {
+        startRouteRefreshBurst();
+      }
+    }
+
+    const originalPushState = history.pushState;
+    history.pushState = function () {
+      const result = originalPushState.apply(this, arguments);
+      onLocationMaybeChanged();
+      return result;
+    };
+
+    const originalReplaceState = history.replaceState;
+    history.replaceState = function () {
+      const result = originalReplaceState.apply(this, arguments);
+      onLocationMaybeChanged();
+      return result;
+    };
+
+    window.addEventListener('popstate', onLocationMaybeChanged);
+    window.addEventListener('hashchange', onLocationMaybeChanged);
+
+    // Fallback: catches router updates that do not fire history events reliably.
+    setInterval(onLocationMaybeChanged, 500);
+  }
+
   function init() {
     injectStyles();
-    ensureUi();
     refresh();
     observeDomChanges();
-
-    // LinkedIn uses client-side routing; keep the script in sync when URL changes.
-    let lastUrl = location.href;
-    setInterval(function () {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        scheduleRefresh();
-      }
-    }, 1000);
+    observeRouteChanges();
 
     // Fallback polling for UI states updated without structural mutations.
     setInterval(function () {
