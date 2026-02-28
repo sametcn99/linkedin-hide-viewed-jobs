@@ -12,7 +12,7 @@
 // @name:zh-CN   LinkedIn 隐藏已查看职位
 // @name:ar      لينكدإن إخفاء الوظائف التي تمت مشاهدتها
 // @namespace    https://github.com/sametcn99
-// @version      1.0.2
+// @version      1.0.3
 // @description  Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
 // @description:es Oculta tarjetas de empleo vistas en LinkedIn Jobs, agrega una insignia compacta y arrastrable, y te permite mostrar los elementos ocultos cuando quieras.
@@ -149,7 +149,9 @@
     '[data-occludable-job-id]',
     'li[data-occludable-job-id]',
     'li.jobs-search-results__list-item',
-    'li.scaffold-layout__list-item'
+    'li.scaffold-layout__list-item',
+    'li.discovery-templates-entity-item',
+    'li[class*="discovery-templates-entity-item"]'
   ];
   const VIEWED_MARKER_SELECTORS = [
     'li.job-card-container__footer-job-state',
@@ -612,6 +614,21 @@
 
     if (hasViewedKeyword(card.textContent || '')) {
       return true;
+    }
+
+    // Discovery template cards may render state text on deeply nested children.
+    if (card.matches('li.discovery-templates-entity-item, li[class*="discovery-templates-entity-item"]')) {
+      const descendants = card.querySelectorAll('*');
+      for (let i = 0; i < descendants.length; i += 1) {
+        const node = descendants[i];
+        const text = (node.textContent || '').trim();
+        const aria = node.getAttribute('aria-label') || '';
+        const title = node.getAttribute('title') || '';
+
+        if (hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title)) {
+          return true;
+        }
+      }
     }
 
     return false;
