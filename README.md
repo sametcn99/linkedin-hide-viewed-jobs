@@ -113,3 +113,4 @@ Guidelines:
 
 - Repository: `https://github.com/sametcn99/linkedin-hide-viewed-jobs`
 - Issues: `https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues`
+- Greasy Fork: `https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs`
