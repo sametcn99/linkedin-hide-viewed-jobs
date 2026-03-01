@@ -57,10 +57,27 @@
 (function () {
   'use strict';
 
+  // ── User-Configurable Settings ────────────────────────────────────────
+  const CONFIG = Object.freeze({
+    POLL_INTERVAL_MS: 2000,           // Fallback polling interval
+    ROUTE_CHECK_INTERVAL_MS: 500,     // SPA route-change check interval
+    ROUTE_BURST_INTERVAL_MS: 250,     // Post-navigation rapid refresh interval
+    ROUTE_BURST_MAX_TICKS: 12,        // Max rapid-refresh cycles after navigation
+    LAZY_RENDER_TIMEOUT_MS: 8000,     // Timeout for waiting on lazily-rendered cards
+    MUTATION_DEBOUNCE_MS: 80,         // Min interval between MutationObserver refreshes
+    UI_Z_INDEX: 99999,                // Badge z-index
+    UI_EDGE_MARGIN: 8,                // Badge drag edge margin (px)
+    ENABLE_HIGHLIGHT: true,           // Toggle viewed-card highlight feature
+    HIGHLIGHT_COLOR: 'rgba(46, 204, 113, 0.95)',  // Viewed-card highlight color
+    HIGHLIGHT_BORDER_RADIUS: '6px',   // Viewed-card highlight border-radius
+  });
+  // ─────────────────────────────────────────────────────────────────────
+
   const STORAGE_KEY = 'lhvj-show-hidden';
   const UI_POSITION_KEY = 'lhvj-ui-position';
   const HIDDEN_CLASS = 'lhvj-hidden-by-script';
   const UI_ID = 'lhvj-toggle-root';
+  const VIEWED_HIGHLIGHT_CLASS = 'lhvj-viewed-highlight';
   const VIEWED_KEYWORDS = [
     // English
     'Viewed',
@@ -158,13 +175,54 @@
     'li[class*="footer-job-state"]',
     '.job-card-container__footer-wrapper li'
   ];
+  const POTENTIAL_VIEWED_ANCHOR_SELECTORS = [
+    'a[href*="/jobs/view/"]',
+    'a[href*="/jobs/collections/"]',
+    'a[href*="currentJobId="]',
+    'a[href*="trk=public_jobs"]',
+    'a.job-card-container__link',
+    'a[data-control-name*="job"]',
+    'a[class*="job-card"]'
+  ];
 
-  let showHidden = localStorage.getItem(STORAGE_KEY) === '1';
+  // Pre-joined selector strings (avoids re-joining on every call)
+  const CARD_SELECTOR_JOINED = JOB_CARD_SELECTORS.join(',');
+  const MARKER_SELECTOR_JOINED = VIEWED_MARKER_SELECTORS.join(',');
+  const ANCHOR_SELECTOR_JOINED = POTENTIAL_VIEWED_ANCHOR_SELECTORS.join(',');
+
+  let showHidden = false;
   let hiddenCount = 0;
   let rafId = 0;
   let isDragging = false;
   let routeRefreshBurstId = 0;
+  let routeCheckIntervalId = 0;
+  let pollIntervalId = 0;
   let lastRouteChangeAt = Date.now();
+  const delayedRefreshTimers = new Map();
+  const uiState = {
+    root: null,
+    countNum: null,
+    countUnit: null,
+    stateEl: null
+  };
+
+  function getStorageItem(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function setStorageItem(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      // Ignore quota/privacy failures to keep script behavior stable.
+    }
+  }
+
+  showHidden = getStorageItem(STORAGE_KEY) === '1';
 
   function injectStyles() {
     if (document.getElementById('lhvj-style')) {
@@ -179,7 +237,7 @@
       '  position: fixed;',
       '  top: 76px;',
       '  right: 16px;',
-      '  z-index: 99999;',
+      '  z-index: ' + CONFIG.UI_Z_INDEX + ';',
       '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;',
       '  background: #1d2226;',
       '  border-radius: 999px;',
@@ -305,6 +363,19 @@
       '  outline: 2px solid #70b5f9;',
       '  outline-offset: 2px;',
       '}',
+      `.${VIEWED_HIGHLIGHT_CLASS} {`,
+      '  box-shadow: inset 0 0 0 2px ' + CONFIG.HIGHLIGHT_COLOR + ' !important;',
+      '  outline: 2px solid ' + CONFIG.HIGHLIGHT_COLOR + ' !important;',
+      '  outline-offset: -2px !important;',
+      '  border-radius: ' + CONFIG.HIGHLIGHT_BORDER_RADIUS + ' !important;',
+      '  background-color: rgba(46, 204, 113, 0.06) !important;',
+      '}',
+      `.${VIEWED_HIGHLIGHT_CLASS} .job-card-container,`,
+      `.${VIEWED_HIGHLIGHT_CLASS}[class*="job-card"],`,
+      `.${VIEWED_HIGHLIGHT_CLASS} > div {`,
+      '  box-shadow: inset 0 0 0 2px ' + CONFIG.HIGHLIGHT_COLOR + ' !important;',
+      '  border-radius: ' + CONFIG.HIGHLIGHT_BORDER_RADIUS + ' !important;',
+      '}',
       '@media (max-width: 900px) {',
       `  #${UI_ID} {`,
       '    top: 70px;',
@@ -318,7 +389,7 @@
 
   function getSavedUiPosition() {
     try {
-      const raw = localStorage.getItem(UI_POSITION_KEY);
+      const raw = getStorageItem(UI_POSITION_KEY);
       if (!raw) {
         return null;
       }
@@ -328,20 +399,21 @@
         !pos ||
         typeof pos.left !== 'number' ||
         typeof pos.top !== 'number' ||
-        Number.isNaN(pos.left) ||
-        Number.isNaN(pos.top)
+        !Number.isFinite(pos.left) ||
+        !Number.isFinite(pos.top)
       ) {
         return null;
       }
 
-      return pos;
+      // Return a clean object to avoid prototype-pollution from tampered localStorage
+      return { left: pos.left, top: pos.top };
     } catch (error) {
       return null;
     }
   }
 
   function clampUiPosition(left, top, root) {
-    const margin = 8;
+    const margin = CONFIG.UI_EDGE_MARGIN;
     const maxLeft = Math.max(margin, window.innerWidth - root.offsetWidth - margin);
     const maxTop = Math.max(margin, window.innerHeight - root.offsetHeight - margin);
 
@@ -358,7 +430,7 @@
     root.style.right = 'auto';
 
     if (save) {
-      localStorage.setItem(UI_POSITION_KEY, JSON.stringify(clamped));
+      setStorageItem(UI_POSITION_KEY, JSON.stringify(clamped));
     }
   }
 
@@ -421,8 +493,16 @@
   }
 
   function ensureUi() {
+    if (uiState.root && document.body.contains(uiState.root)) {
+      return uiState.root;
+    }
+
     let root = document.getElementById(UI_ID);
     if (root) {
+      uiState.root = root;
+      uiState.countNum = root.querySelector('.lhvj-count-num');
+      uiState.countUnit = root.querySelector('.lhvj-count-unit');
+      uiState.stateEl = root.querySelector('.lhvj-state');
       return root;
     }
 
@@ -460,7 +540,7 @@
     checkbox.setAttribute('aria-label', 'Toggle hiding of viewed jobs');
     checkbox.addEventListener('change', function () {
       showHidden = checkbox.checked;
-      localStorage.setItem(STORAGE_KEY, showHidden ? '1' : '0');
+      setStorageItem(STORAGE_KEY, showHidden ? '1' : '0');
       scheduleRefresh();
     });
 
@@ -480,14 +560,19 @@
 
     makeUiDraggable(root, dragHandle);
 
+    uiState.root = root;
+    uiState.countNum = countNum;
+    uiState.countUnit = countUnit;
+    uiState.stateEl = stateEl;
+
     return root;
   }
 
   function updateUiCount() {
     const root = ensureUi();
-    const countNum = root.querySelector('.lhvj-count-num');
-    const countUnit = root.querySelector('.lhvj-count-unit');
-    const stateEl = root.querySelector('.lhvj-state');
+    const countNum = uiState.countNum;
+    const countUnit = uiState.countUnit;
+    const stateEl = uiState.stateEl;
     if (!countNum || !countUnit || !stateEl) {
       return;
     }
@@ -501,25 +586,10 @@
   function getJobCards() {
     const cardSet = new Set();
 
-    JOB_CARD_SELECTORS.forEach(function (selector) {
-      document.querySelectorAll(selector).forEach(function (node) {
-        if (node instanceof HTMLElement) {
-          cardSet.add(node);
-        }
-      });
-    });
-
-    document.querySelectorAll('[data-occludable-job-id]').forEach(function (node) {
-      if (!(node instanceof HTMLElement)) {
-        return;
-      }
-
-      const card = node.matches('[data-occludable-job-id]')
-        ? node
-        : node.closest('[data-occludable-job-id]');
-
-      if (card) {
-        cardSet.add(card);
+    // Single combined query; [data-occludable-job-id] is already in CARD_SELECTOR_JOINED.
+    document.querySelectorAll(CARD_SELECTOR_JOINED).forEach(function (node) {
+      if (node instanceof HTMLElement) {
+        cardSet.add(node);
       }
     });
 
@@ -531,24 +601,15 @@
       return null;
     }
 
-    const card = node.closest(JOB_CARD_SELECTORS.join(','));
+    const card = node.closest(CARD_SELECTOR_JOINED);
     return card instanceof HTMLElement ? card : null;
   }
 
   function getViewedCardsFromMarkers() {
     const viewedCards = new Set();
-    const selector = VIEWED_MARKER_SELECTORS.join(',');
 
-    document.querySelectorAll(selector).forEach(function (node) {
-      if (!(node instanceof HTMLElement)) {
-        return;
-      }
-
-      const text = (node.textContent || '').trim();
-      const aria = node.getAttribute('aria-label') || '';
-      const title = node.getAttribute('title') || '';
-
-      if (!(hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title))) {
+    document.querySelectorAll(MARKER_SELECTOR_JOINED).forEach(function (node) {
+      if (!(node instanceof HTMLElement) || !isElementVisible(node) || !hasViewedText(node)) {
         return;
       }
 
@@ -568,66 +629,159 @@
       .replace(/[\u0300-\u036f]/g, '');
   }
 
+  // Pre-compute normalized keywords once and match each item one by one.
+  const NORMALIZED_KEYWORDS = VIEWED_KEYWORDS
+    .map(normalizeForMatch)
+    .filter(function (keyword) {
+      return keyword.length > 0;
+    });
+
+  function isAsciiLetterOrNumber(ch) {
+    if (!ch) {
+      return false;
+    }
+
+    const code = ch.charCodeAt(0);
+    return (
+      (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122)
+    );
+  }
+
+  function hasBoundary(text, start, keywordLength) {
+    const before = start > 0 ? text[start - 1] : '';
+    const afterIndex = start + keywordLength;
+    const after = afterIndex < text.length ? text[afterIndex] : '';
+
+    return !isAsciiLetterOrNumber(before) && !isAsciiLetterOrNumber(after);
+  }
+
+  function containsKeywordExactly(text, keyword) {
+    let fromIndex = 0;
+
+    while (fromIndex < text.length) {
+      const index = text.indexOf(keyword, fromIndex);
+      if (index === -1) {
+        return false;
+      }
+
+      if (hasBoundary(text, index, keyword.length)) {
+        return true;
+      }
+
+      fromIndex = index + 1;
+    }
+
+    return false;
+  }
+
+  // Return true when an element is actually rendered/visible to users.
+  // This prevents the script from matching keywords inside visually-hidden elements
+  // (e.g. aria-hidden, display:none, visibility:hidden, opacity:0, or no client rects).
+  function isElementVisible(el) {
+    if (!(el instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (el.hasAttribute('hidden')) {
+      return false;
+    }
+
+    const ariaHidden = el.getAttribute('aria-hidden');
+    if (ariaHidden === 'true') {
+      return false;
+    }
+
+    const style = window.getComputedStyle(el);
+    if (style) {
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return false;
+      }
+
+      if (parseFloat(style.opacity) === 0) {
+        return false;
+      }
+    }
+
+    try {
+      const rects = el.getClientRects();
+      if (rects && rects.length === 0) {
+        return false;
+      }
+    } catch (e) {
+      // Some nodes may throw; conservatively assume visible in that case.
+    }
+
+    return true;
+  }
+
   function hasViewedKeyword(text) {
     const normalized = normalizeForMatch(text);
-    return VIEWED_KEYWORDS.some(function (keyword) {
-      return normalized.includes(normalizeForMatch(keyword));
-    });
+    if (!normalized) {
+      return false;
+    }
+
+    for (let i = 0; i < NORMALIZED_KEYWORDS.length; i += 1) {
+      const keyword = NORMALIZED_KEYWORDS[i];
+      if (containsKeywordExactly(normalized, keyword)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Check text content, aria-label, and title of an element for viewed keywords.
+  function hasViewedText(el) {
+    if (!(el instanceof HTMLElement)) {
+      return false;
+    }
+    const text = (el.textContent || '').trim();
+    const aria = el.getAttribute('aria-label') || '';
+    const title = el.getAttribute('title') || '';
+    return hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title);
+  }
+
+  function cardContainsViewedInDescendants(card, selector, maxNodes) {
+    const nodes = card.querySelectorAll(selector);
+    const limit = Math.min(nodes.length, maxNodes);
+
+    for (let i = 0; i < limit; i += 1) {
+      if (isElementVisible(nodes[i]) && hasViewedText(nodes[i])) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   function isViewedJobCard(card) {
-    const className = card.className || '';
-    if (hasViewedKeyword(className)) {
+    if (hasViewedKeyword(card.className || '')) {
       return true;
     }
 
-    const cardAria = card.getAttribute('aria-label') || '';
-    const cardTitle = card.getAttribute('title') || '';
-    if (hasViewedKeyword(cardAria) || hasViewedKeyword(cardTitle)) {
+    if (hasViewedText(card)) {
       return true;
     }
 
-    // LinkedIn metadata chips are commonly rendered as li items inside nested ul blocks.
+    // LinkedIn metadata chips: li items inside nested ul blocks.
     const infoItems = card.querySelectorAll('ul li');
     for (let i = 0; i < infoItems.length; i += 1) {
-      const item = infoItems[i];
-      const text = (item.textContent || '').trim();
-      const aria = item.getAttribute('aria-label') || '';
-      const title = item.getAttribute('title') || '';
-
-      if (hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title)) {
+      if (isElementVisible(infoItems[i]) && hasViewedText(infoItems[i])) {
         return true;
       }
     }
 
-    const subNodes = card.querySelectorAll('[aria-label], [title], span, small, div, p, time');
-    for (let i = 0; i < subNodes.length; i += 1) {
-      const item = subNodes[i];
-      const text = (item.textContent || '').trim();
-      const aria = item.getAttribute('aria-label') || '';
-      const title = item.getAttribute('title') || '';
-
-      if (hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title)) {
-        return true;
-      }
-    }
-
-    if (hasViewedKeyword(card.textContent || '')) {
+    // Sub-elements with semantic or visible text content.
+    if (cardContainsViewedInDescendants(card, '[aria-label], [title], span, small, div, p, time', 100)) {
       return true;
     }
 
     // Discovery template cards may render state text on deeply nested children.
     if (card.matches('li.discovery-templates-entity-item, li[class*="discovery-templates-entity-item"]')) {
-      const descendants = card.querySelectorAll('*');
-      for (let i = 0; i < descendants.length; i += 1) {
-        const node = descendants[i];
-        const text = (node.textContent || '').trim();
-        const aria = node.getAttribute('aria-label') || '';
-        const title = node.getAttribute('title') || '';
-
-        if (hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title)) {
-          return true;
-        }
+      if (cardContainsViewedInDescendants(card, '*', 140)) {
+        return true;
       }
     }
 
@@ -644,25 +798,53 @@
     }
   }
 
-  function isViewedAnchor(anchor) {
-    const text = (anchor.textContent || '').trim();
-    const aria = anchor.getAttribute('aria-label') || '';
-    const title = anchor.getAttribute('title') || '';
+  function applyViewedHighlight(card, shouldHighlight) {
+    if (!CONFIG.ENABLE_HIGHLIGHT) {
+      card.classList.remove(VIEWED_HIGHLIGHT_CLASS);
+      card.removeAttribute('data-lhvj-viewed');
+      return;
+    }
 
-    if (hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title)) {
+    if (shouldHighlight) {
+      card.classList.add(VIEWED_HIGHLIGHT_CLASS);
+      card.setAttribute('data-lhvj-viewed', '1');
+    } else {
+      card.classList.remove(VIEWED_HIGHLIGHT_CLASS);
+      card.removeAttribute('data-lhvj-viewed');
+    }
+  }
+
+  function hasViewedStateInScope(scope) {
+    if (!(scope instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (cardContainsViewedInDescendants(scope, MARKER_SELECTOR_JOINED, 24)) {
+      return true;
+    }
+
+    // Fallback for home feed variants where viewed state is rendered outside marker list items.
+    return cardContainsViewedInDescendants(scope, '[aria-label], [title], span, small, p, time, li', 80);
+  }
+
+  function isViewedAnchor(anchor, scope) {
+    if (!isElementVisible(anchor)) {
+      return false;
+    }
+
+    if (hasViewedText(anchor)) {
       return true;
     }
 
     const descendants = anchor.querySelectorAll('[aria-label], [title]');
     for (let i = 0; i < descendants.length; i += 1) {
-      const node = descendants[i];
-      const childAria = node.getAttribute('aria-label') || '';
-      const childTitle = node.getAttribute('title') || '';
-      const childText = (node.textContent || '').trim();
-
-      if (hasViewedKeyword(childText) || hasViewedKeyword(childAria) || hasViewedKeyword(childTitle)) {
+      if (isElementVisible(descendants[i]) && hasViewedText(descendants[i])) {
         return true;
       }
+    }
+
+    if (scope && hasViewedStateInScope(scope)) {
+      return true;
     }
 
     return false;
@@ -682,6 +864,14 @@
     return location.pathname === '/jobs' || location.pathname === '/jobs/';
   }
 
+  function isJobsCollectionsPage() {
+    return location.pathname.indexOf('/jobs/collections') === 0;
+  }
+
+  function shouldUseAnchorDetection() {
+    return isJobsHomePage() || isJobsCollectionsPage();
+  }
+
   function restoreHiddenAnchors() {
     document.querySelectorAll('a[data-lhvj-hidden-anchor="1"]').forEach(function (node) {
       if (!(node instanceof HTMLElement)) {
@@ -692,25 +882,82 @@
     });
   }
 
-  function refreshViewedAnchors() {
-    let viewedAnchorCount = 0;
+  function getPotentialViewedAnchors() {
+    const anchorSet = new Set();
 
-    // Anchor-based keyword scan is intentionally limited to jobs home.
-    if (!isJobsHomePage()) {
-      restoreHiddenAnchors();
-      return viewedAnchorCount;
+    document.querySelectorAll(ANCHOR_SELECTOR_JOINED).forEach(function (node) {
+      if (node instanceof HTMLElement) {
+        anchorSet.add(node);
+      }
+    });
+
+    // Keep previously hidden anchors in scope so stale states can be restored reliably.
+    document.querySelectorAll('a[data-lhvj-hidden-anchor="1"]').forEach(function (node) {
+      if (node instanceof HTMLElement) {
+        anchorSet.add(node);
+      }
+    });
+
+    return Array.from(anchorSet);
+  }
+
+  function getCardFromAnchor(node) {
+    if (!(node instanceof HTMLElement)) {
+      return null;
     }
 
-    document.querySelectorAll('a').forEach(function (node) {
+    const card = node.closest(CARD_SELECTOR_JOINED);
+    if (card instanceof HTMLElement) {
+      return card;
+    }
+
+    const fallbackCard = node.closest(
+      '[data-occludable-job-id], [data-job-id], li.scaffold-layout__list-item, li.jobs-search-results__list-item, li[class*="jobs-search-results"], li[class*="job-card"], div[class*="job-card"], article[class*="job"], .job-card-container, .job-card-list'
+    );
+
+    if (fallbackCard instanceof HTMLElement) {
+      return fallbackCard;
+    }
+
+    // /jobs homepage can expose anchor-based cards without list-item wrappers.
+    if (node.matches('a[href*="/jobs/view/"], a[href*="/jobs/collections/"], a[href*="currentJobId="]')) {
+      return node;
+    }
+
+    return null;
+  }
+
+  function refreshViewedAnchors() {
+    let viewedAnchorCount = 0;
+    const viewedAnchorCards = new Set();
+
+    // Anchor-based detection is enabled on /jobs home and /jobs/collections variants.
+    if (!shouldUseAnchorDetection()) {
+      restoreHiddenAnchors();
+      return {
+        viewedAnchorCount: viewedAnchorCount,
+        viewedAnchorCards: viewedAnchorCards
+      };
+    }
+
+    getPotentialViewedAnchors().forEach(function (node) {
       if (!(node instanceof HTMLElement)) {
         return;
       }
 
-      const viewed = isViewedAnchor(node);
+      const card = getCardFromAnchor(node);
+      const scope = card || node.closest('li, article, div') || node;
       const hiddenByScript = node.getAttribute('data-lhvj-hidden-anchor') === '1';
+      // Keep hidden anchors sticky while hide mode is ON to avoid hide/show flip loops.
+      const viewed = hiddenByScript && showHidden ? true : isViewedAnchor(node, scope);
 
       if (viewed) {
         viewedAnchorCount += 1;
+        if (card) {
+          viewedAnchorCards.add(card);
+          applyVisibility(card, showHidden);
+          applyViewedHighlight(card, !showHidden);
+        }
       }
 
       if (viewed || hiddenByScript) {
@@ -718,7 +965,10 @@
       }
     });
 
-    return viewedAnchorCount;
+    return {
+      viewedAnchorCount: viewedAnchorCount,
+      viewedAnchorCards: viewedAnchorCards
+    };
   }
 
   function getHomeCardFromViewedMarker(node) {
@@ -737,16 +987,8 @@
       return viewedHomeCards;
     }
 
-    const selector = VIEWED_MARKER_SELECTORS.join(',');
-    document.querySelectorAll(selector).forEach(function (node) {
-      if (!(node instanceof HTMLElement)) {
-        return;
-      }
-
-      const text = (node.textContent || '').trim();
-      const aria = node.getAttribute('aria-label') || '';
-      const title = node.getAttribute('title') || '';
-      if (!(hasViewedKeyword(text) || hasViewedKeyword(aria) || hasViewedKeyword(title))) {
+    document.querySelectorAll(MARKER_SELECTOR_JOINED).forEach(function (node) {
+      if (!(node instanceof HTMLElement) || !isElementVisible(node) || !hasViewedText(node)) {
         return;
       }
 
@@ -757,6 +999,7 @@
 
       viewedHomeCards.add(card);
       applyVisibility(card, showHidden);
+      applyViewedHighlight(card, !showHidden);
     });
 
     return viewedHomeCards;
@@ -775,6 +1018,24 @@
     if (root) {
       root.remove();
     }
+
+    uiState.root = null;
+    uiState.countNum = null;
+    uiState.countUnit = null;
+    uiState.stateEl = null;
+  }
+
+  function queueRefresh(delayMs) {
+    if (delayedRefreshTimers.has(delayMs)) {
+      return;
+    }
+
+    const timerId = setTimeout(function () {
+      delayedRefreshTimers.delete(delayMs);
+      scheduleRefresh();
+    }, delayMs);
+
+    delayedRefreshTimers.set(delayMs, timerId);
   }
 
   function startRouteRefreshBurst() {
@@ -790,11 +1051,11 @@
       ticks += 1;
       scheduleRefresh();
 
-      if (ticks >= 12 || !isJobsPage()) {
+      if (ticks >= CONFIG.ROUTE_BURST_MAX_TICKS || !isJobsPage()) {
         clearInterval(routeRefreshBurstId);
         routeRefreshBurstId = 0;
       }
-    }, 250);
+    }, CONFIG.ROUTE_BURST_INTERVAL_MS);
   }
 
   function refresh() {
@@ -807,9 +1068,9 @@
     const cards = getJobCards();
 
     // Retry briefly after navigation because LinkedIn can render cards lazily.
-    if (cards.length === 0 && Date.now() - lastRouteChangeAt < 8000) {
-      setTimeout(scheduleRefresh, 180);
-      setTimeout(scheduleRefresh, 600);
+    if (cards.length === 0 && Date.now() - lastRouteChangeAt < CONFIG.LAZY_RENDER_TIMEOUT_MS) {
+      queueRefresh(180);
+      queueRefresh(600);
     }
 
     const viewedCardsFromMarkers = getViewedCardsFromMarkers();
@@ -831,10 +1092,45 @@
       }
 
       applyVisibility(card, viewed && showHidden);
+      // When UI toggle is OFF, mark detected viewed cards with a subtle green inset border.
+      applyViewedHighlight(card, viewed && !showHidden);
     });
 
-    const viewedAnchorCount = refreshViewedAnchors();
+    const viewedAnchorResult = refreshViewedAnchors();
+    const viewedAnchorCount = viewedAnchorResult.viewedAnchorCount;
     const viewedHomeCardsFallback = refreshJobsHomeViewedCardsFallback();
+    const finalViewedCards = new Set(viewedCards);
+
+    viewedAnchorResult.viewedAnchorCards.forEach(function (card) {
+      finalViewedCards.add(card);
+    });
+
+    viewedHomeCardsFallback.forEach(function (card) {
+      finalViewedCards.add(card);
+    });
+
+    // Clean up stale card states on cards detected in earlier passes.
+    document.querySelectorAll('[data-lhvj-hidden="1"]').forEach(function (node) {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+
+      const stillViewed = finalViewedCards.has(node);
+      if (!showHidden || !stillViewed) {
+        applyVisibility(node, false);
+      }
+    });
+
+    document.querySelectorAll('[data-lhvj-viewed="1"]').forEach(function (node) {
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+
+      const stillViewed = finalViewedCards.has(node);
+      if (!stillViewed || showHidden) {
+        applyViewedHighlight(node, false);
+      }
+    });
 
     // On /jobs home, viewed state can be present in anchors even when card markers are missing.
     // Keep the larger count so the badge stays in sync with what is actually hidden/viewed.
@@ -855,15 +1151,40 @@
   }
 
   function observeDomChanges() {
+    let mutationTimer = 0;
+
     const observer = new MutationObserver(function () {
-      scheduleRefresh();
+      if (mutationTimer) {
+        return;
+      }
+      mutationTimer = setTimeout(function () {
+        mutationTimer = 0;
+        scheduleRefresh();
+      }, CONFIG.MUTATION_DEBOUNCE_MS);
     });
+
+    if (!document.body) {
+      return;
+    }
 
     observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: false
     });
+  }
+
+  function wrapHistoryMethod(methodName, onLocationMaybeChanged) {
+    const originalMethod = history[methodName];
+    if (typeof originalMethod !== 'function') {
+      return;
+    }
+
+    history[methodName] = function () {
+      const result = originalMethod.apply(this, arguments);
+      onLocationMaybeChanged();
+      return result;
+    };
   }
 
   function observeRouteChanges() {
@@ -880,33 +1201,22 @@
 
       // LinkedIn often paints list items after route change callbacks.
       scheduleRefresh();
-      setTimeout(scheduleRefresh, 120);
-      setTimeout(scheduleRefresh, 420);
+      queueRefresh(120);
+      queueRefresh(420);
 
       if (isJobsPage()) {
         startRouteRefreshBurst();
       }
     }
 
-    const originalPushState = history.pushState;
-    history.pushState = function () {
-      const result = originalPushState.apply(this, arguments);
-      onLocationMaybeChanged();
-      return result;
-    };
-
-    const originalReplaceState = history.replaceState;
-    history.replaceState = function () {
-      const result = originalReplaceState.apply(this, arguments);
-      onLocationMaybeChanged();
-      return result;
-    };
+    wrapHistoryMethod('pushState', onLocationMaybeChanged);
+    wrapHistoryMethod('replaceState', onLocationMaybeChanged);
 
     window.addEventListener('popstate', onLocationMaybeChanged);
     window.addEventListener('hashchange', onLocationMaybeChanged);
 
     // Fallback: catches router updates that do not fire history events reliably.
-    setInterval(onLocationMaybeChanged, 500);
+    routeCheckIntervalId = setInterval(onLocationMaybeChanged, CONFIG.ROUTE_CHECK_INTERVAL_MS);
   }
 
   function init() {
@@ -916,9 +1226,9 @@
     observeRouteChanges();
 
     // Fallback polling for UI states updated without structural mutations.
-    setInterval(function () {
+    pollIntervalId = setInterval(function () {
       scheduleRefresh();
-    }, 2000);
+    }, CONFIG.POLL_INTERVAL_MS);
 
     window.addEventListener('resize', function () {
       syncUiPositionWithinViewport();
