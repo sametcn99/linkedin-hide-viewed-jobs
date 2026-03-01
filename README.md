@@ -21,8 +21,9 @@ The script shows a compact badge at the top-right of the page:
 - Persists badge position (drag and drop)
 - Detects URL changes for LinkedIn SPA navigation
 - Uses `MutationObserver` for infinite scroll and dynamic content
-- Adds periodic refresh (`setInterval`) as an additional safety layer
 - Multilingual `viewed` keyword support
+- Robust SPA handling: debounce/DOM mutation timers, route-change detection with safe restart
+- Adds highlighting to viewed cards when hiding is `OFF` for better visibility
 
 ## Supported Pages
 

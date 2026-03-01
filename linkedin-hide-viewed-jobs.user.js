@@ -12,7 +12,7 @@
 // @name:zh-CN   LinkedIn 隐藏已查看职位
 // @name:ar      لينكدإن إخفاء الوظائف التي تمت مشاهدتها
 // @namespace    https://github.com/sametcn99
-// @version      1.0.3
+// @version      1.0.4
 // @description  Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
 // @description:es Oculta tarjetas de empleo vistas en LinkedIn Jobs, agrega una insignia compacta y arrastrable, y te permite mostrar los elementos ocultos cuando quieras.
@@ -168,21 +168,40 @@
     'li.jobs-search-results__list-item',
     'li.scaffold-layout__list-item',
     'li.discovery-templates-entity-item',
-    'li[class*="discovery-templates-entity-item"]'
+    'li[class*="discovery-templates-entity-item"]',
+    'article.job-search-card',
+    'div.job-search-card',
+    'div.base-card',
+    'article.base-card',
+    'li.jobs-collections-module__list-item',
+    'div.jobs-collections-module__list-item',
+    'li.jobs-collection__list-item',
+    'div.jobs-collection__list-item',
+    '.jobs-collections-module__job-card',
+    '.jobs-collections-module__job-card-container'
   ];
   const VIEWED_MARKER_SELECTORS = [
     'li.job-card-container__footer-job-state',
     'li[class*="footer-job-state"]',
-    '.job-card-container__footer-wrapper li'
+    '.job-card-container__footer-wrapper li',
+    '[class*="job-card-footer"]',
+    '[class*="job-state"]',
+    '[data-jobstate]',
+    '[data-viewed="true"]',
+    'span.job-card-list__footer'
   ];
   const POTENTIAL_VIEWED_ANCHOR_SELECTORS = [
     'a[href*="/jobs/view/"]',
     'a[href*="/jobs/collections/"]',
+    'a[href*="/jobs/search/"]',
     'a[href*="currentJobId="]',
     'a[href*="trk=public_jobs"]',
     'a.job-card-container__link',
     'a[data-control-name*="job"]',
-    'a[class*="job-card"]'
+    'a[class*="job-card"]',
+    'a.base-card__full-link',
+    'a.jobs-collection-card__link',
+    'a.jobs-collections-module__link'
   ];
 
   // Pre-joined selector strings (avoids re-joining on every call)
@@ -197,6 +216,10 @@
   let routeRefreshBurstId = 0;
   let routeCheckIntervalId = 0;
   let pollIntervalId = 0;
+  let domObserver = null;
+  let domMutationTimerId = 0;
+  let isRuntimeActive = false;
+  let isReloadingForPathChange = false;
   let lastRouteChangeAt = Date.now();
   const delayedRefreshTimers = new Map();
   const uiState = {
@@ -205,6 +228,10 @@
     countUnit: null,
     stateEl: null
   };
+
+  function onWindowResize() {
+    syncUiPositionWithinViewport();
+  }
 
   function getStorageItem(key) {
     try {
@@ -860,16 +887,22 @@
     }
   }
 
-  function isJobsHomePage() {
-    return location.pathname === '/jobs' || location.pathname === '/jobs/';
+  function isJobsRootPath(pathname) {
+    return pathname === '/jobs' || pathname === '/jobs/';
   }
 
-  function isJobsCollectionsPage() {
-    return location.pathname.indexOf('/jobs/collections') === 0;
+  function isJobsSubPath(pathname) {
+    return pathname.indexOf('/jobs/') === 0;
+  }
+
+  function isJobsPath(pathname) {
+    // Fallback: treat any pathname containing '/jobs' as a jobs page to survive UI path tweaks.
+    return isJobsRootPath(pathname) || isJobsSubPath(pathname) || pathname.indexOf('/jobs') !== -1;
   }
 
   function shouldUseAnchorDetection() {
-    return isJobsHomePage() || isJobsCollectionsPage();
+    // Enable anchor detection on /jobs and all nested routes.
+    return isJobsPath(location.pathname);
   }
 
   function restoreHiddenAnchors() {
@@ -885,6 +918,26 @@
   function getPotentialViewedAnchors() {
     const anchorSet = new Set();
 
+    // Route transitions can swap class names; rely on href patterns as a stable fallback.
+    document.querySelectorAll('a[href]').forEach(function (node) {
+      if (!(node instanceof HTMLAnchorElement)) {
+        return;
+      }
+
+      const href = node.getAttribute('href') || '';
+      if (
+        href.indexOf('/jobs/view/') !== -1 ||
+        href.indexOf('/jobs/collections/') !== -1 ||
+        href.indexOf('/jobs/collections/recommended') !== -1 ||
+        href.indexOf('/jobs/search/') !== -1 ||
+        href.indexOf('currentJobId=') !== -1 ||
+        href.indexOf('trk=public_jobs') !== -1
+      ) {
+        anchorSet.add(node);
+      }
+    });
+
+    // Keep explicit selectors as an additional signal for legacy layouts.
     document.querySelectorAll(ANCHOR_SELECTOR_JOINED).forEach(function (node) {
       if (node instanceof HTMLElement) {
         anchorSet.add(node);
@@ -912,14 +965,14 @@
     }
 
     const fallbackCard = node.closest(
-      '[data-occludable-job-id], [data-job-id], li.scaffold-layout__list-item, li.jobs-search-results__list-item, li[class*="jobs-search-results"], li[class*="job-card"], div[class*="job-card"], article[class*="job"], .job-card-container, .job-card-list'
+      '[data-occludable-job-id], [data-job-id], li.scaffold-layout__list-item, li.jobs-search-results__list-item, li[class*="jobs-search-results"], li[class*="job-card"], div[class*="job-card"], article[class*="job"], .job-card-container, .job-card-list, li.jobs-collections-module__list-item, div.jobs-collections-module__list-item, .jobs-collections-module__job-card, .jobs-collections-module__job-card-container'
     );
 
     if (fallbackCard instanceof HTMLElement) {
       return fallbackCard;
     }
 
-    // /jobs homepage can expose anchor-based cards without list-item wrappers.
+    // Some /jobs views can expose anchor-based cards without list-item wrappers.
     if (node.matches('a[href*="/jobs/view/"], a[href*="/jobs/collections/"], a[href*="currentJobId="]')) {
       return node;
     }
@@ -931,7 +984,7 @@
     let viewedAnchorCount = 0;
     const viewedAnchorCards = new Set();
 
-    // Anchor-based detection is enabled on /jobs home and /jobs/collections variants.
+    // Anchor-based detection is enabled on /jobs and all /jobs/* routes.
     if (!shouldUseAnchorDetection()) {
       restoreHiddenAnchors();
       return {
@@ -971,20 +1024,25 @@
     };
   }
 
-  function getHomeCardFromViewedMarker(node) {
+  function getCardFromViewedMarker(node) {
     if (!(node instanceof HTMLElement)) {
       return null;
     }
 
-    const card = node.closest('[data-occludable-job-id], li.scaffold-layout__list-item, .job-card-container, .job-card-list');
+    const card = node.closest(
+      CARD_SELECTOR_JOINED +
+      ', [data-job-id], .job-card-container, .job-card-list, .base-card, .job-search-card,' +
+      ' li[class*="jobs-search"], li[class*="job-card"], div[class*="job-card"], article[class*="job"], article[class*="base-card"], .jobs-collections-module__job-card, .jobs-collections-module__job-card-container, li.jobs-collections-module__list-item, div.jobs-collections-module__list-item'
+    );
+
     return card instanceof HTMLElement ? card : null;
   }
 
-  function refreshJobsHomeViewedCardsFallback() {
-    const viewedHomeCards = new Set();
+  function refreshJobsViewedCardsFallback() {
+    const viewedCardsFromFallback = new Set();
 
-    if (!isJobsHomePage()) {
-      return viewedHomeCards;
+    if (!isJobsPage()) {
+      return viewedCardsFromFallback;
     }
 
     document.querySelectorAll(MARKER_SELECTOR_JOINED).forEach(function (node) {
@@ -992,21 +1050,17 @@
         return;
       }
 
-      const card = getHomeCardFromViewedMarker(node);
+      const card = getCardFromViewedMarker(node);
       if (!card) {
         return;
       }
 
-      viewedHomeCards.add(card);
+      viewedCardsFromFallback.add(card);
       applyVisibility(card, showHidden);
       applyViewedHighlight(card, !showHidden);
     });
 
-    return viewedHomeCards;
-  }
-
-  function isJobsPath(pathname) {
-    return pathname === '/jobs' || pathname.indexOf('/jobs/') === 0;
+    return viewedCardsFromFallback;
   }
 
   function isJobsPage() {
@@ -1038,13 +1092,123 @@
     delayedRefreshTimers.set(delayMs, timerId);
   }
 
+  function clearDelayedRefreshTimers() {
+    delayedRefreshTimers.forEach(function (timerId) {
+      clearTimeout(timerId);
+    });
+
+    delayedRefreshTimers.clear();
+  }
+
+  function clearRouteRefreshBurst() {
+    if (!routeRefreshBurstId) {
+      return;
+    }
+
+    clearInterval(routeRefreshBurstId);
+    routeRefreshBurstId = 0;
+  }
+
+  function resetScriptAppliedStates() {
+    document.querySelectorAll('[data-lhvj-hidden="1"]').forEach(function (node) {
+      if (node instanceof HTMLElement) {
+        applyVisibility(node, false);
+      }
+    });
+
+    document.querySelectorAll('a[data-lhvj-hidden-anchor="1"]').forEach(function (node) {
+      if (node instanceof HTMLElement) {
+        applyAnchorVisibility(node, false);
+      }
+    });
+
+    document.querySelectorAll('[data-lhvj-viewed="1"]').forEach(function (node) {
+      if (node instanceof HTMLElement) {
+        applyViewedHighlight(node, false);
+      }
+    });
+  }
+
+  function stopDomObserver() {
+    if (domMutationTimerId) {
+      clearTimeout(domMutationTimerId);
+      domMutationTimerId = 0;
+    }
+
+    if (domObserver) {
+      domObserver.disconnect();
+      domObserver = null;
+    }
+  }
+
+  function stopRuntime() {
+    if (!isRuntimeActive) {
+      return;
+    }
+
+    // Cancel all pending work before tearing down DOM state.
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+
+    clearRouteRefreshBurst();
+    clearDelayedRefreshTimers();
+    stopDomObserver();
+
+    if (pollIntervalId) {
+      clearInterval(pollIntervalId);
+      pollIntervalId = 0;
+    }
+
+    window.removeEventListener('resize', onWindowResize);
+
+    resetScriptAppliedStates();
+
+    hiddenCount = 0;
+    removeUi();
+    isRuntimeActive = false;
+  }
+
+  function startRuntime() {
+    if (isRuntimeActive) {
+      return;
+    }
+
+    lastRouteChangeAt = Date.now();
+
+    observeDomChanges();
+    scheduleRefresh();
+    queueRefresh(120);
+    queueRefresh(420);
+
+    // Fallback polling for UI states updated without structural mutations.
+    pollIntervalId = setInterval(function () {
+      scheduleRefresh();
+    }, CONFIG.POLL_INTERVAL_MS);
+
+    window.addEventListener('resize', onWindowResize);
+    isRuntimeActive = true;
+
+    if (isJobsPage()) {
+      startRouteRefreshBurst();
+    }
+  }
+
+  function hardRestartRuntimeForPathChange() {
+    if (isReloadingForPathChange) {
+      return;
+    }
+
+    // Force a full document reload so the userscript engine re-injects from scratch.
+    isReloadingForPathChange = true;
+    window.location.reload();
+  }
+
   function startRouteRefreshBurst() {
     let ticks = 0;
 
-    if (routeRefreshBurstId) {
-      clearInterval(routeRefreshBurstId);
-      routeRefreshBurstId = 0;
-    }
+    clearRouteRefreshBurst();
 
     // LinkedIn can populate cards progressively after navigation.
     routeRefreshBurstId = setInterval(function () {
@@ -1098,14 +1262,14 @@
 
     const viewedAnchorResult = refreshViewedAnchors();
     const viewedAnchorCount = viewedAnchorResult.viewedAnchorCount;
-    const viewedHomeCardsFallback = refreshJobsHomeViewedCardsFallback();
+    const viewedCardsFallback = refreshJobsViewedCardsFallback();
     const finalViewedCards = new Set(viewedCards);
 
     viewedAnchorResult.viewedAnchorCards.forEach(function (card) {
       finalViewedCards.add(card);
     });
 
-    viewedHomeCardsFallback.forEach(function (card) {
+    viewedCardsFallback.forEach(function (card) {
       finalViewedCards.add(card);
     });
 
@@ -1132,9 +1296,10 @@
       }
     });
 
-    // On /jobs home, viewed state can be present in anchors even when card markers are missing.
+    // On some /jobs routes, viewed state can be present in anchors or fallback markers
+    // even when default card markers are missing.
     // Keep the larger count so the badge stays in sync with what is actually hidden/viewed.
-    hiddenCount = Math.max(hiddenCount, viewedAnchorCount, viewedHomeCardsFallback.size);
+    hiddenCount = Math.max(hiddenCount, viewedAnchorCount, viewedCardsFallback.size);
 
     updateUiCount();
   }
@@ -1151,14 +1316,15 @@
   }
 
   function observeDomChanges() {
-    let mutationTimer = 0;
+    stopDomObserver();
 
-    const observer = new MutationObserver(function () {
-      if (mutationTimer) {
+    domObserver = new MutationObserver(function () {
+      if (domMutationTimerId) {
         return;
       }
-      mutationTimer = setTimeout(function () {
-        mutationTimer = 0;
+
+      domMutationTimerId = setTimeout(function () {
+        domMutationTimerId = 0;
         scheduleRefresh();
       }, CONFIG.MUTATION_DEBOUNCE_MS);
     });
@@ -1167,7 +1333,7 @@
       return;
     }
 
-    observer.observe(document.body, {
+    domObserver.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: false
@@ -1189,14 +1355,23 @@
 
   function observeRouteChanges() {
     let lastUrl = location.href;
+    let lastPathname = location.pathname;
 
     function onLocationMaybeChanged() {
       const currentUrl = location.href;
+      const currentPathname = location.pathname;
       if (currentUrl === lastUrl) {
         return;
       }
 
       lastUrl = currentUrl;
+      const pathChanged = currentPathname !== lastPathname;
+      if (pathChanged) {
+        lastPathname = currentPathname;
+        hardRestartRuntimeForPathChange();
+        return;
+      }
+
       lastRouteChangeAt = Date.now();
 
       // LinkedIn often paints list items after route change callbacks.
@@ -1221,18 +1396,8 @@
 
   function init() {
     injectStyles();
-    refresh();
-    observeDomChanges();
+    startRuntime();
     observeRouteChanges();
-
-    // Fallback polling for UI states updated without structural mutations.
-    pollIntervalId = setInterval(function () {
-      scheduleRefresh();
-    }, CONFIG.POLL_INTERVAL_MS);
-
-    window.addEventListener('resize', function () {
-      syncUiPositionWithinViewport();
-    });
   }
 
   if (document.readyState === 'loading') {
