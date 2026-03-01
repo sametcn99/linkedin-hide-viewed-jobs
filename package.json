@@ -7,7 +7,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "check": "npm run lint && npm run format"
+    "check": "bun run lint && bun run lint:fix && bun run format"
   },
   "repository": {
     "type": "git",
