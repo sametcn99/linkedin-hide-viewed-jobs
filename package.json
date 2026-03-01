@@ -1,0 +1,32 @@
+{
+  "name": "linkedin-hide-viewed-jobs",
+  "description": "A userscript that automatically hides viewed job postings in LinkedIn Jobs.",
+  "main": "linkedin-hide-viewed-jobs.user.js",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check": "npm run lint && npm run format"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sametcn99/linkedin-hide-viewed-jobs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues"
+  },
+  "homepage": "https://github.com/sametcn99/linkedin-hide-viewed-jobs#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.3.0",
+    "prettier": "^3.8.1"
+  }
+}
