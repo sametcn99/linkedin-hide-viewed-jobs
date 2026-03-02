@@ -10,7 +10,7 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write src/",
-    "check": "bun run lint && bun run lint:fix && bun run format"
+    "check": "bun run lint:fix && bun run format"
   },
   "repository": {
     "type": "git",

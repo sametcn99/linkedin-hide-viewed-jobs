@@ -57,9 +57,6 @@
 (function () {
   'use strict';
 
-  var __defProp = Object.defineProperty;
-  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
   const CONFIG = Object.freeze({
     POLL_INTERVAL_MS: 2e3,
     ROUTE_CHECK_INTERVAL_MS: 500,
@@ -81,72 +78,56 @@
     VIEWED_HIGHLIGHT_CLASS: "lhvj-viewed-highlight"
   });
   const VIEWED_KEYWORDS = Object.freeze([
-    // English
-    "Viewed",
+"Viewed",
     "Seen",
     "Applied",
-    // Turkish
-    "Görüntülenen",
+"Görüntülenen",
     "Görüntülendi",
     "Başvurulan",
     "Başvurulanlar",
     "Başvuruldu",
-    // Spanish
-    "Visto",
+"Visto",
     "Vistos",
     "Aplicado",
     "Postulado",
-    // Portuguese
-    "Visualizado",
+"Visualizado",
     "Visualizados",
     "Candidatado",
     "Candidatura",
-    // French
-    "Vu",
+"Vu",
     "Vue",
     "Postulé",
     "Postulée",
     "Candidature",
-    // German
-    "Angesehen",
+"Angesehen",
     "Gesehen",
     "Beworben",
-    // Italian
-    "Visualizzato",
+"Visualizzato",
     "Visto",
     "Candidata",
     "Candidati",
     "Candidatura",
-    // Dutch
-    "Bekeken",
+"Bekeken",
     "Solliciteerd",
-    // Russian
-    "Просмотрено",
+"Просмотрено",
     "Откликнулся",
-    // Polish
-    "Wyświetlono",
+"Wyświetlono",
     "Aplikowano",
-    // Swedish
-    "Visad",
+"Visad",
     "Sedd",
     "Sökt",
-    // Chinese (Simplified / Traditional)
-    "已查看",
+"已查看",
     "已申请",
     "已檢視",
     "已申請",
-    // Japanese
-    "閲覧済み",
+"閲覧済み",
     "応募済み",
-    // Korean
-    "조회됨",
+"조회됨",
     "지원함",
     "지원 완료",
-    // Arabic
-    "تمت المشاهدة",
+"تمت المشاهدة",
     "تم التقديم",
-    // Hindi
-    "देखा गया",
+"देखा गया",
     "आवेदन किया गया"
   ]);
   const JOB_CARD_SELECTORS = Object.freeze([
@@ -248,9 +229,11 @@
     }
   }
   class KeywordMatcher {
+    normalizedKeywords;
     constructor() {
-      __publicField(this, "normalizedKeywords");
-      this.normalizedKeywords = VIEWED_KEYWORDS.map((kw) => this.normalize(kw)).filter((kw) => kw.length > 0);
+      this.normalizedKeywords = VIEWED_KEYWORDS.map((kw) => this.normalize(kw)).filter(
+        (kw) => kw.length > 0
+      );
     }
     normalize(text) {
       return (text || "").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -294,21 +277,19 @@
     }
   }
   class DetectionService {
+    matcher;
     constructor(matcher) {
-      __publicField(this, "matcher");
       this.matcher = matcher;
     }
-    /** Collect all job card elements on the page */
-    getJobCards() {
-      const cardSet = /* @__PURE__ */ new Set();
+getJobCards() {
+      const cardSet = new Set();
       document.querySelectorAll(CARD_SELECTOR_JOINED).forEach((node) => {
         cardSet.add(node);
       });
       return Array.from(cardSet);
     }
-    /** Find cards that are marked as viewed via marker selectors */
-    getViewedCardsFromMarkers() {
-      const viewedCards = /* @__PURE__ */ new Set();
+getViewedCardsFromMarkers() {
+      const viewedCards = new Set();
       document.querySelectorAll(MARKER_SELECTOR_JOINED).forEach((node) => {
         if (!this.isElementVisible(node) || !this.matcher.hasViewedText(node)) return;
         const card = this.getCardFromNode(node);
@@ -316,8 +297,7 @@
       });
       return viewedCards;
     }
-    /** Full card-level scan for viewed status */
-    isViewedJobCard(card) {
+isViewedJobCard(card) {
       if (this.matcher.hasViewedKeyword(card.className || "")) return true;
       if (this.matcher.hasViewedText(card)) return true;
       const infoItems = card.querySelectorAll("ul li");
@@ -326,18 +306,23 @@
           return true;
         }
       }
-      if (this.cardContainsViewedInDescendants(card, "[aria-label], [title], span, small, div, p, time", 100)) {
+      if (this.cardContainsViewedInDescendants(
+        card,
+        "[aria-label], [title], span, small, div, p, time",
+        100
+      )) {
         return true;
       }
-      if (card.matches('li.discovery-templates-entity-item, li[class*="discovery-templates-entity-item"]')) {
+      if (card.matches(
+        'li.discovery-templates-entity-item, li[class*="discovery-templates-entity-item"]'
+      )) {
         if (this.cardContainsViewedInDescendants(card, "*", 140)) return true;
       }
       return false;
     }
-    /** Anchor-based detection for viewed jobs */
-    refreshViewedAnchors(showHidden) {
+refreshViewedAnchors(showHidden) {
       let viewedAnchorCount = 0;
-      const viewedAnchorCards = /* @__PURE__ */ new Set();
+      const viewedAnchorCards = new Set();
       if (!this.shouldUseAnchorDetection()) {
         this.restoreHiddenAnchors();
         return { viewedAnchorCount, viewedAnchorCards };
@@ -361,9 +346,8 @@
       });
       return { viewedAnchorCount, viewedAnchorCards };
     }
-    /** Fallback marker-based detection */
-    refreshJobsViewedCardsFallback(showHidden) {
-      const viewedCards = /* @__PURE__ */ new Set();
+refreshJobsViewedCardsFallback(showHidden) {
+      const viewedCards = new Set();
       if (!this.isJobsPage()) return viewedCards;
       document.querySelectorAll(MARKER_SELECTOR_JOINED).forEach((node) => {
         if (!this.isElementVisible(node) || !this.matcher.hasViewedText(node)) return;
@@ -410,8 +394,7 @@
       }
       return true;
     }
-    // ── Private helpers ──────────────────────────────────────────────────
-    getCardFromNode(node) {
+getCardFromNode(node) {
       const card = node.closest(CARD_SELECTOR_JOINED);
       return card ?? null;
     }
@@ -420,7 +403,9 @@
       if (card) return card;
       const fallback = node.closest(EXTENDED_CARD_SELECTOR);
       if (fallback) return fallback;
-      if (node.matches('a[href*="/jobs/view/"], a[href*="/jobs/collections/"], a[href*="currentJobId="]')) {
+      if (node.matches(
+        'a[href*="/jobs/view/"], a[href*="/jobs/collections/"], a[href*="currentJobId="]'
+      )) {
         return node;
       }
       return null;
@@ -446,7 +431,7 @@
       });
     }
     getPotentialViewedAnchors() {
-      const anchorSet = /* @__PURE__ */ new Set();
+      const anchorSet = new Set();
       document.querySelectorAll("a[href]").forEach((node) => {
         const href = node.getAttribute("href") || "";
         if (href.includes("/jobs/view/") || href.includes("/jobs/collections/") || href.includes("/jobs/collections/recommended") || href.includes("/jobs/search/") || href.includes("currentJobId=") || href.includes("trk=public_jobs")) {
@@ -502,32 +487,29 @@
     }
   }
   class RouterService {
+    lastUrl = location.href;
+    lastPathname = location.pathname;
+    routeRefreshBurstId = null;
+    domObserver = null;
+    domMutationTimerId = null;
+    delayedRefreshTimers = new Map();
+    onRefresh;
+    onPathChange;
     constructor(onRefresh, onPathChange) {
-      __publicField(this, "lastUrl", location.href);
-      __publicField(this, "lastPathname", location.pathname);
-      __publicField(this, "routeRefreshBurstId", null);
-      __publicField(this, "domObserver", null);
-      __publicField(this, "domMutationTimerId", null);
-      __publicField(this, "delayedRefreshTimers", /* @__PURE__ */ new Map());
-      __publicField(this, "onRefresh");
-      __publicField(this, "onPathChange");
       this.onRefresh = onRefresh;
       this.onPathChange = onPathChange;
     }
-    /** Start observing route and DOM changes */
-    startObserving() {
+startObserving() {
       this.observeRouteChanges();
       this.observeDomChanges();
     }
-    /** Stop all observers and timers */
-    stopAll() {
+stopAll() {
       this.stopDomObserver();
       this.clearRouteRefreshBurst();
       this.delayedRefreshTimers.forEach((id) => clearTimeout(id));
       this.delayedRefreshTimers.clear();
     }
-    /** Queue a delayed refresh */
-    queueRefresh(delayMs) {
+queueRefresh(delayMs) {
       if (this.delayedRefreshTimers.has(delayMs)) return;
       const timerId = setTimeout(() => {
         this.delayedRefreshTimers.delete(delayMs);
@@ -535,8 +517,7 @@
       }, delayMs);
       this.delayedRefreshTimers.set(delayMs, timerId);
     }
-    /** Start rapid refresh burst after navigation */
-    startRouteRefreshBurst() {
+startRouteRefreshBurst() {
       let ticks = 0;
       this.clearRouteRefreshBurst();
       this.routeRefreshBurstId = setInterval(() => {
@@ -547,13 +528,11 @@
         }
       }, CONFIG.ROUTE_BURST_INTERVAL_MS);
     }
-    /** Restart DOM observer */
-    restartDomObserver() {
+restartDomObserver() {
       this.stopDomObserver();
       this.observeDomChanges();
     }
-    // ── Private ──────────────────────────────────────────────────────────
-    observeRouteChanges() {
+observeRouteChanges() {
       const handler = () => this.onLocationMaybeChanged();
       this.wrapHistoryMethod("pushState", handler);
       this.wrapHistoryMethod("replaceState", handler);
@@ -618,9 +597,7 @@
     }
   }
   class StyleManager {
-    constructor() {
-      __publicField(this, "injected", false);
-    }
+    injected = false;
     inject() {
       if (this.injected || document.getElementById("lhvj-style")) return;
       const style = document.createElement("style");
@@ -633,8 +610,7 @@
       const { HIDDEN_CLASS, UI_ID, VIEWED_HIGHLIGHT_CLASS } = DOM_IDS;
       const { UI_Z_INDEX, HIGHLIGHT_COLOR, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
       return (
-        /* css */
-        `
+`
       .${HIDDEN_CLASS} { display: none !important; }
 
       #${UI_ID} {
@@ -804,21 +780,20 @@
     }
   }
   class Badge {
+    storage;
+    onToggle;
+    state = {
+      root: null,
+      countNum: null,
+      countUnit: null,
+      stateEl: null
+    };
+    isDragging = false;
     constructor(storage, onToggle) {
-      __publicField(this, "storage");
-      __publicField(this, "onToggle");
-      __publicField(this, "state", {
-        root: null,
-        countNum: null,
-        countUnit: null,
-        stateEl: null
-      });
-      __publicField(this, "isDragging", false);
       this.storage = storage;
       this.onToggle = onToggle;
     }
-    /** Create or reattach the badge, returns the root element */
-    ensure(showHidden) {
+ensure(showHidden) {
       if (this.state.root && document.body.contains(this.state.root)) {
         return this.state.root;
       }
@@ -836,8 +811,7 @@
       this.cacheElements(root);
       return root;
     }
-    /** Update displayed count and state label */
-    updateCount(hiddenCount, showHidden) {
+updateCount(hiddenCount, showHidden) {
       const root = this.state.root;
       if (!root || !this.state.countNum || !this.state.countUnit || !this.state.stateEl) return;
       root.setAttribute("data-show-hidden", showHidden ? "1" : "0");
@@ -845,8 +819,7 @@
       this.state.countUnit.textContent = showHidden ? "hidden" : "viewed";
       this.state.stateEl.textContent = showHidden ? "ON" : "OFF";
     }
-    /** Remove the badge from the DOM */
-    remove() {
+remove() {
       const root = document.getElementById(DOM_IDS.UI_ID);
       if (root) root.remove();
       this.state.root = null;
@@ -854,15 +827,13 @@
       this.state.countUnit = null;
       this.state.stateEl = null;
     }
-    /** Clamp badge position within the viewport */
-    syncPositionWithinViewport() {
+syncPositionWithinViewport() {
       const root = document.getElementById(DOM_IDS.UI_ID);
       if (!root) return;
       const rect = root.getBoundingClientRect();
       this.applyPosition(root, rect.left, rect.top, true);
     }
-    // ── Private ──────────────────────────────────────────────────────────
-    buildDom(showHidden) {
+buildDom(showHidden) {
       const root = document.createElement("div");
       root.id = DOM_IDS.UI_ID;
       const dragHandle = document.createElement("span");
@@ -956,22 +927,19 @@
     }
   }
   class App {
+    storage;
+    matcher;
+    detection;
+    styleManager;
+    badge;
+    router;
+    showHidden;
+    hiddenCount = 0;
+    rafId = 0;
+    isRuntimeActive = false;
+    isReloadingForPathChange = false;
+    lastRouteChangeAt = Date.now();
     constructor() {
-      __publicField(this, "storage");
-      __publicField(this, "matcher");
-      __publicField(this, "detection");
-      __publicField(this, "styleManager");
-      __publicField(this, "badge");
-      __publicField(this, "router");
-      __publicField(this, "showHidden");
-      __publicField(this, "hiddenCount", 0);
-      __publicField(this, "rafId", 0);
-      __publicField(this, "isRuntimeActive", false);
-      __publicField(this, "isReloadingForPathChange", false);
-      __publicField(this, "lastRouteChangeAt", Date.now());
-      __publicField(this, "onWindowResize", () => {
-        this.badge.syncPositionWithinViewport();
-      });
       this.storage = new StorageService();
       this.matcher = new KeywordMatcher();
       this.detection = new DetectionService(this.matcher);
@@ -987,14 +955,12 @@
         () => this.hardRestartRuntimeForPathChange()
       );
     }
-    /** Bootstrap the userscript */
-    init() {
+init() {
       this.styleManager.inject();
       this.startRuntime();
       this.router.startObserving();
     }
-    // ── Runtime lifecycle ────────────────────────────────────────────────
-    startRuntime() {
+startRuntime() {
       if (this.isRuntimeActive) return;
       this.lastRouteChangeAt = Date.now();
       this.router.restartDomObserver();
@@ -1012,8 +978,7 @@
       this.isReloadingForPathChange = true;
       window.location.reload();
     }
-    // ── Refresh cycle ────────────────────────────────────────────────────
-    scheduleRefresh() {
+scheduleRefresh() {
       if (this.rafId) cancelAnimationFrame(this.rafId);
       this.rafId = requestAnimationFrame(() => {
         this.rafId = 0;
@@ -1060,10 +1025,17 @@
           this.detection.applyViewedHighlight(node, false);
         }
       });
-      this.hiddenCount = Math.max(this.hiddenCount, anchorResult.viewedAnchorCount, fallbackCards.size);
+      this.hiddenCount = Math.max(
+        this.hiddenCount,
+        anchorResult.viewedAnchorCount,
+        fallbackCards.size
+      );
       this.badge.ensure(this.showHidden);
       this.badge.updateCount(this.hiddenCount, this.showHidden);
     }
+    onWindowResize = () => {
+      this.badge.syncPositionWithinViewport();
+    };
   }
   const app = new App();
   if (document.readyState === "loading") {
