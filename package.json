@@ -1,22 +1,24 @@
 {
   "name": "linkedin-hide-viewed-jobs",
   "description": "A userscript that automatically hides viewed job postings in LinkedIn Jobs.",
-  "main": "linkedin-hide-viewed-jobs.user.js",
+  "version": "1.0.5",
+  "type": "module",
   "scripts": {
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "check": "bun run lint && bun run lint:fix && bun run format"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/",
+    "check": "bun run lint:fix && bun run format"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sametcn99/linkedin-hide-viewed-jobs.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "author": "sametcn99",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues"
   },
@@ -26,7 +28,11 @@
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
-    "globals": "^17.3.0",
-    "prettier": "^3.8.1"
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vite": "^7.3.1",
+    "vite-plugin-monkey": "^7.1.9"
   }
 }

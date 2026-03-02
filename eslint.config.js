@@ -1,10 +1,12 @@
-const js = require('@eslint/js');
-const globals = require('globals');
-const prettierPlugin = require('eslint-plugin-prettier');
-const prettierConfig = require('eslint-config-prettier');
+import js from '@eslint/js';
+import globals from 'globals';
+import prettierPlugin from 'eslint-plugin-prettier';
+import prettierConfig from 'eslint-config-prettier';
+import tseslint from 'typescript-eslint';
 
-module.exports = [
+export default [
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     plugins: {
       prettier: prettierPlugin,
@@ -12,37 +14,19 @@ module.exports = [
     languageOptions: {
       globals: {
         ...globals.browser,
-        ...globals.greasemonkey,
-        ...globals.node,
-        GM_getValue: 'readonly',
-        GM_setValue: 'readonly',
-        GM_deleteValue: 'readonly',
-        GM_listValues: 'readonly',
-        GM_addValueChangeListener: 'readonly',
-        GM_removeValueChangeListener: 'readonly',
-        GM_getResourceText: 'readonly',
-        GM_getResourceURL: 'readonly',
-        GM_addStyle: 'readonly',
-        GM_openInTab: 'readonly',
-        GM_registerMenuCommand: 'readonly',
-        GM_unregisterMenuCommand: 'readonly',
-        GM_setClipboard: 'readonly',
-        GM_xmlhttpRequest: 'readonly',
-        GM_download: 'readonly',
-        GM_getTab: 'readonly',
-        GM_saveTab: 'readonly',
-        GM_getTabs: 'readonly',
-        GM_notification: 'readonly',
-        GM_info: 'readonly',
       },
       ecmaVersion: 'latest',
-      sourceType: 'script',
+      sourceType: 'module',
     },
     rules: {
       ...prettierConfig.rules,
       'prettier/prettier': 'error',
-      'no-unused-vars': 'warn',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'warn',
       'no-console': 'off',
     },
+  },
+  {
+    ignores: ['dist/', 'node_modules/', '*.user.js'],
   },
 ];
