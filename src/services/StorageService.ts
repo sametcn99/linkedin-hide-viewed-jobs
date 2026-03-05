@@ -1,5 +1,5 @@
-import type { IPosition } from '../types';
-import { DOM_IDS } from '../constants';
+import type { IPosition, TDetectionMode } from '../types';
+import { CONFIG, DOM_IDS } from '../constants';
 
 /**
  * Abstraction over localStorage with safe read/write operations.
@@ -27,6 +27,26 @@ export class StorageService {
 
   setShowHidden(value: boolean): void {
     this.setItem(DOM_IDS.STORAGE_KEY, value ? '1' : '0');
+  }
+
+  getScrollGuardEnabled(): boolean {
+    const value = this.getItem(DOM_IDS.SCROLL_GUARD_STORAGE_KEY);
+    if (value === '0') return false;
+    if (value === '1') return true;
+    return CONFIG.SCROLL_GUARD_ENABLED_DEFAULT;
+  }
+
+  setScrollGuardEnabled(value: boolean): void {
+    this.setItem(DOM_IDS.SCROLL_GUARD_STORAGE_KEY, value ? '1' : '0');
+  }
+
+  getDetectionMode(): TDetectionMode {
+    const mode = this.getItem(DOM_IDS.DETECTION_MODE_STORAGE_KEY);
+    return mode === 'highlight' ? 'highlight' : 'hide';
+  }
+
+  setDetectionMode(mode: TDetectionMode): void {
+    this.setItem(DOM_IDS.DETECTION_MODE_STORAGE_KEY, mode);
   }
 
   getSavedPosition(): IPosition | null {

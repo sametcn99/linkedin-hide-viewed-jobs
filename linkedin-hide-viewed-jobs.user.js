@@ -12,7 +12,7 @@
 // @name:zh-CN         LinkedIn 隐藏已查看职位
 // @name:ar            لينكدإن إخفاء الوظائف التي تمت مشاهدتها
 // @namespace          https://github.com/sametcn99
-// @version            1.0.5
+// @version            1.1.0
 // @author             sametcn99
 // @description        Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr     LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
@@ -68,10 +68,21 @@
     UI_EDGE_MARGIN: 8,
     ENABLE_HIGHLIGHT: true,
     HIGHLIGHT_COLOR: "rgba(46, 204, 113, 0.95)",
-    HIGHLIGHT_BORDER_RADIUS: "6px"
+    HIGHLIGHT_BORDER_RADIUS: "6px",
+    SCROLL_GUARD_ENABLED_DEFAULT: true,
+    SCROLL_GUARD_TRIGGER_DELTA_PX: 900,
+    SCROLL_GUARD_TRIGGER_WINDOW_MS: 1200,
+    SCROLL_GUARD_COOLDOWN_MIN_MS: 5e3,
+    SCROLL_GUARD_COOLDOWN_MAX_MS: 1e4,
+    SCROLL_GUARD_ALLOWED_STEP_PX: 110,
+    SCROLL_GUARD_ALLOWED_STEP_MIN_INTERVAL_MS: 120,
+    SCROLL_GUARD_MIN_VIEWED_DENSITY: 0.55,
+    SCROLL_GUARD_DENSITY_WINDOW_MS: 6e3
   });
   const DOM_IDS = Object.freeze({
     STORAGE_KEY: "lhvj-show-hidden",
+    SCROLL_GUARD_STORAGE_KEY: "lhvj-scroll-guard-enabled",
+    DETECTION_MODE_STORAGE_KEY: "lhvj-detection-mode",
     UI_POSITION_KEY: "lhvj-ui-position",
     HIDDEN_CLASS: "lhvj-hidden-by-script",
     UI_ID: "lhvj-toggle-root",
@@ -210,6 +221,22 @@
     }
     setShowHidden(value) {
       this.setItem(DOM_IDS.STORAGE_KEY, value ? "1" : "0");
+    }
+    getScrollGuardEnabled() {
+      const value = this.getItem(DOM_IDS.SCROLL_GUARD_STORAGE_KEY);
+      if (value === "0") return false;
+      if (value === "1") return true;
+      return CONFIG.SCROLL_GUARD_ENABLED_DEFAULT;
+    }
+    setScrollGuardEnabled(value) {
+      this.setItem(DOM_IDS.SCROLL_GUARD_STORAGE_KEY, value ? "1" : "0");
+    }
+    getDetectionMode() {
+      const mode = this.getItem(DOM_IDS.DETECTION_MODE_STORAGE_KEY);
+      return mode === "highlight" ? "highlight" : "hide";
+    }
+    setDetectionMode(mode) {
+      this.setItem(DOM_IDS.DETECTION_MODE_STORAGE_KEY, mode);
     }
     getSavedPosition() {
       try {
@@ -611,49 +638,99 @@ observeRouteChanges() {
       const { UI_Z_INDEX, HIGHLIGHT_COLOR, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
       return (
 `
-      .${HIDDEN_CLASS} { display: none !important; }
+      .${HIDDEN_CLASS} {
+        height: 1px !important;
+        min-height: 1px !important;
+        max-height: 1px !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+      }
 
       #${UI_ID} {
+        --lhvj-bg: linear-gradient(150deg, rgba(34, 40, 46, 0.98), rgba(22, 27, 33, 0.98));
+        --lhvj-border: rgba(255, 255, 255, 0.16);
+        --lhvj-text: #e6edf3;
+        --lhvj-muted: #9aa8b6;
+        --lhvj-chip-bg: rgba(255, 255, 255, 0.08);
+        --lhvj-chip-border: rgba(255, 255, 255, 0.16);
+        --lhvj-focus: #82c8ff;
         position: fixed;
         top: 76px;
         right: 16px;
         z-index: ${UI_Z_INDEX};
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        background: #1d2226;
+        font-family: "Segoe UI Variable", "Segoe UI", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+        background: var(--lhvj-bg);
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--lhvj-border);
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.28);
         display: inline-flex;
-        align-items: center;
-        height: 32px;
+        flex-direction: column;
+        align-items: stretch;
+        min-height: 36px;
+        width: fit-content;
         overflow: hidden;
         user-select: none;
-        transition: box-shadow 0.15s ease;
+        backdrop-filter: blur(6px);
+        transition: box-shadow 0.16s ease, transform 0.16s ease, border-color 0.16s ease;
+      }
+
+      #${UI_ID}[data-settings-open="1"] {
+        border-radius: 14px;
+        min-width: 262px;
+      }
+
+      #${UI_ID}[data-enabled="0"] {
+        width: fit-content;
       }
 
       #${UI_ID}:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35);
+        border-color: rgba(160, 214, 255, 0.38);
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.42), 0 3px 8px rgba(0, 0, 0, 0.26);
+      }
+
+      #${UI_ID}:focus-within {
+        border-color: rgba(130, 200, 255, 0.75);
+        box-shadow: 0 0 0 2px rgba(130, 200, 255, 0.22), 0 10px 24px rgba(0, 0, 0, 0.35);
       }
 
       #${UI_ID}.lhvj-dragging {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        transform: scale(1.01);
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(0, 0, 0, 0.28);
+      }
+
+      #${UI_ID} .lhvj-header {
+        display: inline-flex;
+        align-items: stretch;
+        width: 100%;
+      }
+
+      #${UI_ID} .lhvj-content {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
       }
 
       #${UI_ID} .lhvj-drag-handle {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 28px;
-        height: 100%;
+        width: 30px;
+        align-self: stretch;
         cursor: grab;
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-        color: #3d4449;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        color: #5a6774;
         flex-shrink: 0;
-        transition: color 0.15s ease;
+        transition: color 0.14s ease, background 0.14s ease;
       }
 
       #${UI_ID} .lhvj-drag-handle:hover {
-        color: #9aa4ae;
+        color: #b9c6d3;
+        background: rgba(255, 255, 255, 0.05);
       }
 
       #${UI_ID} .lhvj-drag-handle::before {
@@ -665,92 +742,230 @@ observeRouteChanges() {
         background-size: 4px 4px;
       }
 
-      #${UI_ID} label {
+      #${UI_ID} .lhvj-main {
         display: inline-flex;
         align-items: center;
+        justify-content: flex-start;
         gap: 8px;
-        padding: 0 10px 0 8px;
-        height: 100%;
-        cursor: pointer;
+        padding: 4px 10px 4px 8px;
+        min-height: 36px;
+        cursor: default;
+      }
+
+      #${UI_ID} .lhvj-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 0 10px 8px 8px;
       }
 
       #${UI_ID} .lhvj-count {
         display: inline-flex;
-        align-items: center;
-        gap: 3px;
+        align-items: baseline;
+        gap: 4px;
         white-space: nowrap;
       }
 
       #${UI_ID} .lhvj-count-num {
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 700;
+        letter-spacing: 0.1px;
         line-height: 1;
-        color: #e7e9ea;
+        color: var(--lhvj-text);
       }
 
       #${UI_ID} .lhvj-count-unit {
         font-size: 11px;
-        font-weight: 400;
+        font-weight: 500;
         line-height: 1;
-        color: #9aa4ae;
+        color: var(--lhvj-muted);
       }
 
       #${UI_ID} .lhvj-state {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 30px;
-        padding: 2px 7px;
+        min-width: 34px;
+        padding: 3px 8px;
         border-radius: 999px;
         font-size: 10px;
-        font-weight: 600;
-        letter-spacing: 0.3px;
+        font-weight: 700;
+        letter-spacing: 0.36px;
         line-height: 1;
         text-align: center;
-        background: rgba(255, 255, 255, 0.1);
-        color: #c9d1d9;
-      }
-
-      #${UI_ID}[data-show-hidden="1"] .lhvj-state {
-        background: rgba(112, 181, 249, 0.2);
-        color: #9fd0ff;
-      }
-
-      #${UI_ID} input[type="checkbox"] {
-        appearance: none;
-        width: 0;
-        height: 0;
-        margin: 0;
-        padding: 0;
-        border-radius: 999px;
-        background: #4d5661;
-        position: absolute;
-        opacity: 0;
-        outline: none;
-        border: none;
-        transition: background 0.2s ease;
+        color: #d2dde7;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.07);
         cursor: pointer;
-        pointer-events: none;
-        flex-shrink: 0;
+        transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
       }
 
-      #${UI_ID} input[type="checkbox"]::after {
-        content: "";
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        transition: transform 0.2s ease;
+      #${UI_ID} .lhvj-state:hover {
+        border-color: rgba(255, 255, 255, 0.28);
+        background: rgba(255, 255, 255, 0.13);
       }
 
-      #${UI_ID} input[type="checkbox"]:checked { background: #70b5f9; }
-      #${UI_ID} input[type="checkbox"]:checked::after { transform: translateX(14px); }
-      #${UI_ID} input[type="checkbox"]:focus-visible {
-        outline: 2px solid #70b5f9;
+      #${UI_ID} .lhvj-state:focus-visible {
+        outline: 2px solid var(--lhvj-focus);
+        outline-offset: 2px;
+      }
+
+      #${UI_ID}[data-enabled="1"] .lhvj-state {
+        color: #b8e0ff;
+        border-color: rgba(112, 181, 249, 0.46);
+        background: rgba(112, 181, 249, 0.2);
+      }
+
+      #${UI_ID}[data-enabled="0"] .lhvj-state {
+        color: #ffc4c4;
+        border-color: rgba(240, 120, 120, 0.34);
+        background: rgba(240, 120, 120, 0.18);
+      }
+
+      #${UI_ID} .lhvj-guard-btn {
+        border: 1px solid var(--lhvj-chip-border);
+        background: var(--lhvj-chip-bg);
+        color: #d0dbe6;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.34px;
+        line-height: 1;
+        padding: 4px 8px;
+        cursor: pointer;
+        transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+      }
+
+      #${UI_ID} .lhvj-guard-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.24);
+      }
+
+      #${UI_ID} .lhvj-guard-btn:focus-visible {
+        outline: 2px solid var(--lhvj-focus);
+        outline-offset: 2px;
+      }
+
+      #${UI_ID}[data-scroll-guard="1"] .lhvj-guard-btn {
+        border-color: rgba(243, 186, 99, 0.55);
+        color: #ffe2b3;
+        background: rgba(227, 147, 34, 0.24);
+      }
+
+      #${UI_ID} .lhvj-cooldown {
+        min-width: 0;
+        max-width: 0;
+        overflow: hidden;
+        opacity: 0;
+        color: #ffe3b5;
+        border: 1px solid rgba(243, 176, 88, 0.5);
+        background: rgba(222, 131, 16, 0.24);
+        border-radius: 999px;
+        padding: 0;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        line-height: 1;
+        white-space: nowrap;
+        transition: opacity 0.14s ease, max-width 0.14s ease, padding 0.14s ease;
+      }
+
+      #${UI_ID}[data-cooldown="1"] .lhvj-cooldown {
+        opacity: 1;
+        max-width: 74px;
+        padding: 4px 7px;
+      }
+
+      #${UI_ID} .lhvj-settings-btn {
+        border: 1px solid var(--lhvj-chip-border);
+        background: var(--lhvj-chip-bg);
+        color: #d0dbe6;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.34px;
+        line-height: 1;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-settings-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      #${UI_ID} .lhvj-settings-btn:focus-visible {
+        outline: 2px solid var(--lhvj-focus);
+        outline-offset: 2px;
+      }
+
+      #${UI_ID}[data-settings-open="1"] .lhvj-settings-btn {
+        border-color: rgba(130, 200, 255, 0.5);
+        color: #bee6ff;
+      }
+
+      #${UI_ID} .lhvj-settings-panel {
+        display: none;
+        width: 100%;
+        padding: 8px 10px 10px 38px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.16);
+        box-sizing: border-box;
+      }
+
+      #${UI_ID}[data-settings-open="1"] .lhvj-settings-panel {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      #${UI_ID} .lhvj-settings-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #c5d1dc;
+      }
+
+      #${UI_ID} .lhvj-mode-group {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      #${UI_ID}[data-enabled="0"] .lhvj-guard-btn,
+      #${UI_ID}[data-enabled="0"] .lhvj-cooldown,
+      #${UI_ID}[data-enabled="0"] .lhvj-count,
+      #${UI_ID}[data-enabled="0"] .lhvj-footer,
+      #${UI_ID}[data-enabled="0"] .lhvj-settings-btn,
+      #${UI_ID}[data-enabled="0"] .lhvj-settings-panel {
+        display: none !important;
+      }
+
+      #${UI_ID} .lhvj-mode-btn {
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.06);
+        color: #d4dde6;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.28px;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-mode-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      #${UI_ID} .lhvj-mode-btn[data-active="1"] {
+        border-color: rgba(130, 200, 255, 0.56);
+        color: #b8e0ff;
+        background: rgba(112, 181, 249, 0.24);
+      }
+
+      #${UI_ID} .lhvj-mode-btn:focus-visible {
+        outline: 2px solid var(--lhvj-focus);
         outline-offset: 2px;
       }
 
@@ -769,6 +984,13 @@ observeRouteChanges() {
         border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
       }
 
+      html.lhvj-pagination-cooldown div.jobs-search-pagination button,
+      html.lhvj-pagination-cooldown div.jobs-search-pagination [role="button"] {
+        pointer-events: none !important;
+        opacity: 0.45 !important;
+        cursor: not-allowed !important;
+      }
+
       @media (max-width: 900px) {
         #${UI_ID} {
           top: 70px;
@@ -782,18 +1004,28 @@ observeRouteChanges() {
   class Badge {
     storage;
     onToggle;
+    onScrollGuardToggle;
+    onDetectionModeChange;
     state = {
       root: null,
       countNum: null,
       countUnit: null,
-      stateEl: null
+      stateEl: null,
+      guardBtn: null,
+      cooldownEl: null,
+      settingsBtn: null,
+      settingsPanel: null,
+      modeHideBtn: null,
+      modeHighlightBtn: null
     };
     isDragging = false;
-    constructor(storage, onToggle) {
+    constructor(storage, onToggle, onScrollGuardToggle, onDetectionModeChange) {
       this.storage = storage;
       this.onToggle = onToggle;
+      this.onScrollGuardToggle = onScrollGuardToggle;
+      this.onDetectionModeChange = onDetectionModeChange;
     }
-ensure(showHidden) {
+ensure(isEnabled, scrollGuardEnabled, detectionMode) {
       if (this.state.root && document.body.contains(this.state.root)) {
         return this.state.root;
       }
@@ -802,7 +1034,7 @@ ensure(showHidden) {
         this.cacheElements(root);
         return root;
       }
-      root = this.buildDom(showHidden);
+      root = this.buildDom(isEnabled, scrollGuardEnabled, detectionMode);
       document.body.appendChild(root);
       const saved = this.storage.getSavedPosition();
       if (saved) {
@@ -811,13 +1043,30 @@ ensure(showHidden) {
       this.cacheElements(root);
       return root;
     }
-updateCount(hiddenCount, showHidden) {
+updateCount(count, isEnabled, scrollGuardEnabled, detectionMode, cooldownSecondsLeft = 0) {
       const root = this.state.root;
-      if (!root || !this.state.countNum || !this.state.countUnit || !this.state.stateEl) return;
-      root.setAttribute("data-show-hidden", showHidden ? "1" : "0");
-      this.state.countNum.textContent = String(hiddenCount);
-      this.state.countUnit.textContent = showHidden ? "hidden" : "viewed";
-      this.state.stateEl.textContent = showHidden ? "ON" : "OFF";
+      if (!root || !this.state.countNum || !this.state.countUnit || !this.state.stateEl || !this.state.guardBtn || !this.state.cooldownEl || !this.state.settingsBtn || !this.state.modeHideBtn || !this.state.modeHighlightBtn) {
+        return;
+      }
+      root.setAttribute("data-enabled", isEnabled ? "1" : "0");
+      root.setAttribute("data-scroll-guard", scrollGuardEnabled ? "1" : "0");
+      root.setAttribute("data-cooldown", cooldownSecondsLeft > 0 ? "1" : "0");
+      root.setAttribute("data-detection-mode", detectionMode);
+      if (!isEnabled && root.getAttribute("data-settings-open") === "1") {
+        root.setAttribute("data-settings-open", "0");
+        this.state.settingsBtn.textContent = "Open settings";
+      }
+      this.state.countNum.textContent = String(count);
+      this.state.countUnit.textContent = !isEnabled ? "off" : detectionMode === "hide" ? "hidden" : "marked";
+      this.state.stateEl.textContent = isEnabled ? "ON" : "OFF";
+      this.state.guardBtn.textContent = scrollGuardEnabled ? "GUARD ON" : "GUARD OFF";
+      this.state.cooldownEl.textContent = cooldownSecondsLeft > 0 ? `CD ${cooldownSecondsLeft}s` : "";
+      this.state.modeHideBtn.setAttribute("data-active", detectionMode === "hide" ? "1" : "0");
+      this.state.modeHighlightBtn.setAttribute(
+        "data-active",
+        detectionMode === "highlight" ? "1" : "0"
+      );
+      this.state.settingsBtn.textContent = root.getAttribute("data-settings-open") === "1" ? "Close settings" : "Open settings";
     }
 remove() {
       const root = document.getElementById(DOM_IDS.UI_ID);
@@ -826,6 +1075,12 @@ remove() {
       this.state.countNum = null;
       this.state.countUnit = null;
       this.state.stateEl = null;
+      this.state.guardBtn = null;
+      this.state.cooldownEl = null;
+      this.state.settingsBtn = null;
+      this.state.settingsPanel = null;
+      this.state.modeHideBtn = null;
+      this.state.modeHighlightBtn = null;
     }
 syncPositionWithinViewport() {
       const root = document.getElementById(DOM_IDS.UI_ID);
@@ -833,14 +1088,23 @@ syncPositionWithinViewport() {
       const rect = root.getBoundingClientRect();
       this.applyPosition(root, rect.left, rect.top, true);
     }
-buildDom(showHidden) {
+buildDom(isEnabled, scrollGuardEnabled, detectionMode) {
       const root = document.createElement("div");
       root.id = DOM_IDS.UI_ID;
+      root.setAttribute("data-settings-open", "0");
+      root.setAttribute("data-enabled", isEnabled ? "1" : "0");
+      root.setAttribute("data-scroll-guard", scrollGuardEnabled ? "1" : "0");
+      root.setAttribute("data-detection-mode", detectionMode);
       const dragHandle = document.createElement("span");
       dragHandle.className = "lhvj-drag-handle";
       dragHandle.title = "Drag to reposition";
       dragHandle.setAttribute("aria-label", "Drag badge");
-      const label = document.createElement("label");
+      const header = document.createElement("div");
+      header.className = "lhvj-header";
+      const content = document.createElement("div");
+      content.className = "lhvj-content";
+      const main = document.createElement("div");
+      main.className = "lhvj-main";
       const countEl = document.createElement("span");
       countEl.className = "lhvj-count";
       const countNum = document.createElement("span");
@@ -848,24 +1112,90 @@ buildDom(showHidden) {
       countNum.textContent = "0";
       const countUnit = document.createElement("span");
       countUnit.className = "lhvj-count-unit";
-      countUnit.textContent = showHidden ? "hidden" : "viewed";
+      countUnit.textContent = !isEnabled ? "off" : detectionMode === "hide" ? "hidden" : "marked";
       countEl.appendChild(countNum);
       countEl.appendChild(countUnit);
       const stateEl = document.createElement("span");
       stateEl.className = "lhvj-state";
-      stateEl.textContent = showHidden ? "ON" : "OFF";
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = showHidden;
-      checkbox.setAttribute("aria-label", "Toggle hiding of viewed jobs");
-      checkbox.addEventListener("change", () => {
-        this.onToggle(checkbox.checked);
+      stateEl.textContent = isEnabled ? "ON" : "OFF";
+      stateEl.setAttribute("role", "button");
+      stateEl.setAttribute("tabindex", "0");
+      stateEl.setAttribute("aria-label", "Enable or disable script logic");
+      stateEl.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.onToggle(root.getAttribute("data-enabled") !== "1");
       });
-      label.appendChild(stateEl);
-      label.appendChild(countEl);
-      label.appendChild(checkbox);
-      root.appendChild(dragHandle);
-      root.appendChild(label);
+      stateEl.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        this.onToggle(root.getAttribute("data-enabled") !== "1");
+      });
+      const guardBtn = document.createElement("button");
+      guardBtn.type = "button";
+      guardBtn.className = "lhvj-guard-btn";
+      guardBtn.textContent = scrollGuardEnabled ? "GUARD ON" : "GUARD OFF";
+      guardBtn.setAttribute("aria-label", "Toggle scroll cooldown guard");
+      guardBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const enabled = root.getAttribute("data-scroll-guard") !== "1";
+        this.onScrollGuardToggle(enabled);
+      });
+      const cooldownEl = document.createElement("span");
+      cooldownEl.className = "lhvj-cooldown";
+      const settingsBtn = document.createElement("button");
+      settingsBtn.type = "button";
+      settingsBtn.className = "lhvj-settings-btn";
+      settingsBtn.textContent = "Open settings";
+      settingsBtn.setAttribute("aria-label", "Toggle settings");
+      settingsBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const open = root.getAttribute("data-settings-open") === "1";
+        const nextOpen = !open;
+        root.setAttribute("data-settings-open", nextOpen ? "1" : "0");
+        settingsBtn.textContent = nextOpen ? "Close settings" : "Open settings";
+      });
+      const footer = document.createElement("div");
+      footer.className = "lhvj-footer";
+      const settingsPanel = document.createElement("div");
+      settingsPanel.className = "lhvj-settings-panel";
+      const modeLabel = document.createElement("span");
+      modeLabel.className = "lhvj-settings-label";
+      modeLabel.textContent = "Detected jobs:";
+      const modeGroup = document.createElement("div");
+      modeGroup.className = "lhvj-mode-group";
+      const modeHideBtn = document.createElement("button");
+      modeHideBtn.type = "button";
+      modeHideBtn.className = "lhvj-mode-btn";
+      modeHideBtn.textContent = "Hide";
+      modeHideBtn.setAttribute("data-active", detectionMode === "hide" ? "1" : "0");
+      modeHideBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.onDetectionModeChange("hide");
+      });
+      const modeHighlightBtn = document.createElement("button");
+      modeHighlightBtn.type = "button";
+      modeHighlightBtn.className = "lhvj-mode-btn";
+      modeHighlightBtn.textContent = "Highlight";
+      modeHighlightBtn.setAttribute("data-active", detectionMode === "highlight" ? "1" : "0");
+      modeHighlightBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.onDetectionModeChange("highlight");
+      });
+      modeGroup.appendChild(modeHideBtn);
+      modeGroup.appendChild(modeHighlightBtn);
+      settingsPanel.appendChild(modeLabel);
+      settingsPanel.appendChild(modeGroup);
+      main.appendChild(stateEl);
+      main.appendChild(guardBtn);
+      main.appendChild(cooldownEl);
+      footer.appendChild(settingsBtn);
+      footer.appendChild(countEl);
+      content.appendChild(main);
+      content.appendChild(footer);
+      header.appendChild(dragHandle);
+      header.appendChild(content);
+      root.appendChild(header);
+      root.appendChild(settingsPanel);
       this.makeDraggable(root, dragHandle);
       return root;
     }
@@ -874,6 +1204,13 @@ buildDom(showHidden) {
       this.state.countNum = root.querySelector(".lhvj-count-num");
       this.state.countUnit = root.querySelector(".lhvj-count-unit");
       this.state.stateEl = root.querySelector(".lhvj-state");
+      this.state.guardBtn = root.querySelector(".lhvj-guard-btn");
+      this.state.cooldownEl = root.querySelector(".lhvj-cooldown");
+      this.state.settingsBtn = root.querySelector(".lhvj-settings-btn");
+      this.state.settingsPanel = root.querySelector(".lhvj-settings-panel");
+      const modeButtons = root.querySelectorAll(".lhvj-mode-btn");
+      this.state.modeHideBtn = modeButtons[0] || null;
+      this.state.modeHighlightBtn = modeButtons[1] || null;
     }
     clampPosition(left, top, root) {
       const margin = CONFIG.UI_EDGE_MARGIN;
@@ -927,6 +1264,8 @@ buildDom(showHidden) {
     }
   }
   class App {
+    static PAGINATION_COOLDOWN_CLASS = "lhvj-pagination-cooldown";
+    static COUNT_COOLDOWN_STEP = 20;
     storage;
     matcher;
     detection;
@@ -934,22 +1273,55 @@ buildDom(showHidden) {
     badge;
     router;
     showHidden;
+    scrollGuardEnabled;
+    detectionMode;
     hiddenCount = 0;
     rafId = 0;
     isRuntimeActive = false;
     isReloadingForPathChange = false;
     lastRouteChangeAt = Date.now();
+    isCooldownActive = false;
+    cooldownUntil = 0;
+    lastControlledScrollAt = 0;
+    touchLastY = null;
+    lastObservedScrollY = 0;
+    lastObservedScrollAt = Date.now();
+    isAdjustingNativeScroll = false;
+    countGrowthSinceCooldown = 0;
     constructor() {
       this.storage = new StorageService();
       this.matcher = new KeywordMatcher();
       this.detection = new DetectionService(this.matcher);
       this.styleManager = new StyleManager();
       this.showHidden = this.storage.getShowHidden();
-      this.badge = new Badge(this.storage, (checked) => {
-        this.showHidden = checked;
-        this.storage.setShowHidden(checked);
-        this.scheduleRefresh();
-      });
+      this.scrollGuardEnabled = this.storage.getScrollGuardEnabled();
+      this.detectionMode = this.storage.getDetectionMode();
+      this.badge = new Badge(
+        this.storage,
+        (checked) => {
+          this.showHidden = checked;
+          this.storage.setShowHidden(checked);
+          if (!checked) {
+            this.resetScrollCooldown();
+            this.resetCountBasedCooldownProgress();
+          }
+          this.scheduleRefresh();
+        },
+        (enabled) => {
+          this.scrollGuardEnabled = enabled;
+          this.storage.setScrollGuardEnabled(enabled);
+          if (!enabled) {
+            this.resetScrollCooldown();
+            this.resetCountBasedCooldownProgress();
+          }
+          this.scheduleRefresh();
+        },
+        (mode) => {
+          this.detectionMode = mode;
+          this.storage.setDetectionMode(mode);
+          this.scheduleRefresh();
+        }
+      );
       this.router = new RouterService(
         () => this.scheduleRefresh(),
         () => this.hardRestartRuntimeForPathChange()
@@ -963,17 +1335,36 @@ init() {
 startRuntime() {
       if (this.isRuntimeActive) return;
       this.lastRouteChangeAt = Date.now();
+      this.lastObservedScrollY = window.scrollY;
+      this.lastObservedScrollAt = Date.now();
       this.router.restartDomObserver();
       this.scheduleRefresh();
       this.router.queueRefresh(120);
       this.router.queueRefresh(420);
       window.addEventListener("resize", this.onWindowResize);
+      window.addEventListener("scroll", this.onWindowScroll, { passive: true, capture: true });
+      window.addEventListener("wheel", this.onWheel, { passive: false, capture: true });
+      window.addEventListener("mousedown", this.onMouseDown, { capture: true });
+      window.addEventListener("auxclick", this.onAuxClick, { capture: true });
+      window.addEventListener("keydown", this.onKeyDown, { passive: false, capture: true });
+      window.addEventListener("touchstart", this.onTouchStart, { passive: true });
+      window.addEventListener("touchmove", this.onTouchMove, { passive: false, capture: true });
+      window.addEventListener("touchend", this.onTouchEnd, { passive: true });
+      window.addEventListener("touchcancel", this.onTouchEnd, { passive: true });
       this.isRuntimeActive = true;
       if (this.detection.isJobsPage()) {
         this.router.startRouteRefreshBurst();
       }
     }
     hardRestartRuntimeForPathChange() {
+      if (!this.showHidden) {
+        this.lastRouteChangeAt = Date.now();
+        this.router.restartDomObserver();
+        this.scheduleRefresh();
+        this.router.queueRefresh(120);
+        this.router.queueRefresh(420);
+        return;
+      }
       if (this.isReloadingForPathChange) return;
       this.isReloadingForPathChange = true;
       window.location.reload();
@@ -986,10 +1377,27 @@ scheduleRefresh() {
       });
     }
     refresh() {
+      this.syncCooldownState();
+      this.syncPaginationCooldownClass();
+      const previousHiddenCount = this.hiddenCount;
       if (!this.detection.isJobsPage()) {
         this.hiddenCount = 0;
+        this.resetScrollCooldown();
+        this.resetCountBasedCooldownProgress();
         this.badge.remove();
         return;
+      }
+      if (!this.showHidden) {
+        this.hiddenCount = 0;
+        this.resetScrollCooldown();
+        this.resetCountBasedCooldownProgress();
+        this.clearDetectedVisualState();
+        this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode);
+        this.badge.updateCount(0, this.showHidden, this.scrollGuardEnabled, this.detectionMode, 0);
+        return;
+      }
+      if (!this.isCountCooldownPage()) {
+        this.resetCountBasedCooldownProgress();
       }
       const cards = this.detection.getJobCards();
       if (cards.length === 0 && Date.now() - this.lastRouteChangeAt < CONFIG.LAZY_RENDER_TIMEOUT_MS) {
@@ -1007,21 +1415,22 @@ scheduleRefresh() {
       for (const card of cards) {
         const viewed = viewedCards.has(card);
         if (viewed) this.hiddenCount++;
-        this.detection.applyVisibility(card, viewed && this.showHidden);
-        this.detection.applyViewedHighlight(card, viewed && !this.showHidden);
+        this.detection.applyVisibility(card, viewed && this.detectionMode === "hide");
+        this.detection.applyViewedHighlight(card, viewed && this.detectionMode === "highlight");
       }
-      const anchorResult = this.detection.refreshViewedAnchors(this.showHidden);
-      const fallbackCards = this.detection.refreshJobsViewedCardsFallback(this.showHidden);
+      const shouldHideDetected = this.detectionMode === "hide";
+      const anchorResult = this.detection.refreshViewedAnchors(shouldHideDetected);
+      const fallbackCards = this.detection.refreshJobsViewedCardsFallback(shouldHideDetected);
       const finalViewedCards = new Set(viewedCards);
       anchorResult.viewedAnchorCards.forEach((c) => finalViewedCards.add(c));
       fallbackCards.forEach((c) => finalViewedCards.add(c));
       document.querySelectorAll('[data-lhvj-hidden="1"]').forEach((node) => {
-        if (!this.showHidden || !finalViewedCards.has(node)) {
+        if (!shouldHideDetected || !finalViewedCards.has(node)) {
           this.detection.applyVisibility(node, false);
         }
       });
       document.querySelectorAll('[data-lhvj-viewed="1"]').forEach((node) => {
-        if (!finalViewedCards.has(node) || this.showHidden) {
+        if (!finalViewedCards.has(node) || shouldHideDetected) {
           this.detection.applyViewedHighlight(node, false);
         }
       });
@@ -1030,12 +1439,235 @@ scheduleRefresh() {
         anchorResult.viewedAnchorCount,
         fallbackCards.size
       );
-      this.badge.ensure(this.showHidden);
-      this.badge.updateCount(this.hiddenCount, this.showHidden);
+      this.maybeStartCountBasedCooldown(previousHiddenCount);
+      this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode);
+      this.badge.updateCount(
+        this.hiddenCount,
+        this.showHidden,
+        this.scrollGuardEnabled,
+        this.detectionMode,
+        this.getCooldownSecondsLeft()
+      );
     }
     onWindowResize = () => {
       this.badge.syncPositionWithinViewport();
     };
+    onWheel = (e) => {
+      if (e.deltaY <= 0) return;
+      const handled = this.handleScrollGuardInput(e.deltaY, () => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      if (handled) {
+        this.scheduleRefresh();
+      }
+    };
+    onWindowScroll = () => {
+      const now = Date.now();
+      const currentY = window.scrollY;
+      const deltaY = currentY - this.lastObservedScrollY;
+      const elapsedMs = Math.max(1, now - this.lastObservedScrollAt);
+      if (deltaY <= 0) {
+        this.lastObservedScrollY = currentY;
+        this.lastObservedScrollAt = now;
+        return;
+      }
+      if (!this.shouldUseScrollGuard()) {
+        this.lastObservedScrollY = currentY;
+        this.lastObservedScrollAt = now;
+        return;
+      }
+      this.syncCooldownState();
+      if (this.isCooldownActive && !this.isAdjustingNativeScroll) {
+        const allowedDelta = Math.max(
+          14,
+          CONFIG.SCROLL_GUARD_ALLOWED_STEP_PX * elapsedMs / CONFIG.SCROLL_GUARD_ALLOWED_STEP_MIN_INTERVAL_MS
+        );
+        if (deltaY > allowedDelta) {
+          const clampedY = this.lastObservedScrollY + allowedDelta;
+          this.isAdjustingNativeScroll = true;
+          window.scrollTo({ top: clampedY, behavior: "auto" });
+          this.lastObservedScrollY = clampedY;
+          this.lastObservedScrollAt = now;
+          window.setTimeout(() => {
+            this.isAdjustingNativeScroll = false;
+          }, 0);
+          this.scheduleRefresh();
+          return;
+        }
+      }
+      this.lastObservedScrollY = currentY;
+      this.lastObservedScrollAt = now;
+    };
+    onMouseDown = (e) => {
+      if (e.button !== 1) return;
+      if (!this.shouldBlockMiddleMouseDuringCooldown()) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    onAuxClick = (e) => {
+      if (e.button !== 1) return;
+      if (!this.shouldBlockMiddleMouseDuringCooldown()) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    onKeyDown = (e) => {
+      if (this.isEditableTarget(e.target)) return;
+      const key = e.key;
+      let delta = 0;
+      if (key === "ArrowDown") {
+        delta = 96;
+      } else if (key === "PageDown") {
+        delta = Math.max(window.innerHeight * 0.85, 280);
+      } else if (key === " ") {
+        if (e.shiftKey) return;
+        delta = Math.max(window.innerHeight * 0.85, 280);
+      }
+      if (delta <= 0) return;
+      const handled = this.handleScrollGuardInput(delta, () => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      if (handled) {
+        this.scheduleRefresh();
+      }
+    };
+    onTouchStart = (e) => {
+      if (e.touches.length === 0) return;
+      this.touchLastY = e.touches[0].clientY;
+    };
+    onTouchMove = (e) => {
+      if (e.touches.length === 0 || this.touchLastY === null) return;
+      const currentY = e.touches[0].clientY;
+      const delta = this.touchLastY - currentY;
+      this.touchLastY = currentY;
+      if (delta <= 0) return;
+      const handled = this.handleScrollGuardInput(delta, () => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      if (handled) {
+        this.scheduleRefresh();
+      }
+    };
+    onTouchEnd = () => {
+      this.touchLastY = null;
+    };
+    handleScrollGuardInput(deltaY, cancelDefault) {
+      if (!this.shouldUseScrollGuard()) {
+        return false;
+      }
+      this.syncCooldownState();
+      if (!this.isCooldownActive) {
+        return false;
+      }
+      cancelDefault();
+      this.applyControlledScroll(deltaY);
+      return true;
+    }
+    shouldUseScrollGuard() {
+      if (!this.scrollGuardEnabled) return false;
+      if (!this.showHidden) return false;
+      return this.detection.isJobsPage();
+    }
+    shouldBlockMiddleMouseDuringCooldown() {
+      if (!this.isCooldownActive) return false;
+      return this.shouldUseScrollGuard();
+    }
+    shouldUseCountBasedCooldown() {
+      if (!this.scrollGuardEnabled) return false;
+      if (!this.showHidden) return false;
+      return this.isCountCooldownPage();
+    }
+    maybeStartCountBasedCooldown(previousHiddenCount) {
+      if (!this.shouldUseCountBasedCooldown()) return;
+      if (this.hiddenCount > previousHiddenCount) {
+        this.countGrowthSinceCooldown += this.hiddenCount - previousHiddenCount;
+      }
+      if (this.isCooldownActive) return;
+      if (this.countGrowthSinceCooldown < App.COUNT_COOLDOWN_STEP) return;
+      this.countGrowthSinceCooldown -= App.COUNT_COOLDOWN_STEP;
+      this.startRandomCooldown();
+    }
+    resetCountBasedCooldownProgress() {
+      this.countGrowthSinceCooldown = 0;
+    }
+    isJobsHomepage() {
+      const path = location.pathname;
+      return path === "/jobs" || path === "/jobs/";
+    }
+    isCollectionsPage() {
+      return location.pathname.startsWith("/jobs/collections");
+    }
+    isCountCooldownPage() {
+      return this.isJobsHomepage() || this.isCollectionsPage();
+    }
+    startRandomCooldown() {
+      const minMs = CONFIG.SCROLL_GUARD_COOLDOWN_MIN_MS;
+      const maxMs = CONFIG.SCROLL_GUARD_COOLDOWN_MAX_MS;
+      const durationMs = minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
+      this.isCooldownActive = true;
+      this.cooldownUntil = Date.now() + durationMs;
+      this.lastControlledScrollAt = 0;
+      this.syncPaginationCooldownClass();
+      window.setTimeout(() => {
+        if (!this.isCooldownActive) return;
+        this.syncCooldownState();
+        this.scheduleRefresh();
+      }, durationMs + 20);
+    }
+    applyControlledScroll(deltaY) {
+      const now = Date.now();
+      if (now - this.lastControlledScrollAt < CONFIG.SCROLL_GUARD_ALLOWED_STEP_MIN_INTERVAL_MS) {
+        return;
+      }
+      const step = Math.min(Math.max(deltaY, 0), CONFIG.SCROLL_GUARD_ALLOWED_STEP_PX);
+      if (step <= 0) return;
+      window.scrollBy({ top: step, behavior: "auto" });
+      this.lastControlledScrollAt = now;
+    }
+    syncCooldownState() {
+      if (!this.isCooldownActive) return;
+      if (Date.now() < this.cooldownUntil) return;
+      this.resetScrollCooldown();
+    }
+    resetScrollCooldown() {
+      this.isCooldownActive = false;
+      this.cooldownUntil = 0;
+      this.lastControlledScrollAt = 0;
+      this.isAdjustingNativeScroll = false;
+      this.syncPaginationCooldownClass();
+    }
+    getCooldownSecondsLeft() {
+      if (!this.isCooldownActive) return 0;
+      const msLeft = this.cooldownUntil - Date.now();
+      if (msLeft <= 0) return 0;
+      return Math.ceil(msLeft / 1e3);
+    }
+    isEditableTarget(target) {
+      if (!(target instanceof HTMLElement)) return false;
+      if (target.isContentEditable) return true;
+      return !!target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]');
+    }
+    clearDetectedVisualState() {
+      const { HIDDEN_CLASS } = DOM_IDS;
+      document.querySelectorAll('[data-lhvj-hidden="1"]').forEach((node) => {
+        this.detection.applyVisibility(node, false);
+      });
+      document.querySelectorAll('[data-lhvj-viewed="1"]').forEach((node) => {
+        this.detection.applyViewedHighlight(node, false);
+      });
+      document.querySelectorAll('a[data-lhvj-hidden-anchor="1"]').forEach((node) => {
+        node.classList.remove(HIDDEN_CLASS);
+        node.removeAttribute("data-lhvj-hidden-anchor");
+      });
+    }
+    syncPaginationCooldownClass() {
+      const root = document.documentElement;
+      if (!root) return;
+      const shouldDisablePagination = this.isCooldownActive && this.detection.isJobsPage();
+      root.classList.toggle(App.PAGINATION_COOLDOWN_CLASS, shouldDisablePagination);
+    }
   }
   const app = new App();
   if (document.readyState === "loading") {
