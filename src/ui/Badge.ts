@@ -115,9 +115,8 @@ export class Badge {
       'data-active',
       detectionMode === 'highlight' ? '1' : '0'
     );
-    this.state.settingsBtn.textContent = root.getAttribute('data-settings-open') === '1'
-      ? 'Close settings'
-      : 'Open settings';
+    this.state.settingsBtn.textContent =
+      root.getAttribute('data-settings-open') === '1' ? 'Close settings' : 'Open settings';
   }
 
   /** Remove the badge from the DOM */
