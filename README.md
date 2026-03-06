@@ -135,3 +135,4 @@ Guidelines:
 - Issues: [https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues](https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues)
 - Greasy Fork: [https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs](https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs)
 - Github Gist: [https://gist.github.com/sametcn99/66cf2c0da5c793d6f56763ece2b9027a](https://gist.github.com/sametcn99/66cf2c0da5c793d6f56763ece2b9027a)
+- OpenUserJS: [https://openuserjs.org/scripts/sametcn99/LinkedIn_Hide_Viewed_Jobs](https://openuserjs.org/scripts/sametcn99/LinkedIn_Hide_Viewed_Jobs)
