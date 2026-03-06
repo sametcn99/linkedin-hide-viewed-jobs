@@ -2,13 +2,6 @@
 
 A userscript that automatically hides viewed job postings in LinkedIn Jobs.
 
-- **Vertical Layout**: Compact two-row design for easy access to controls.
-- **Top Row**: Contains the `ON/OFF` state toggle and the `Guard` (Scroll Protection) toggle.
-- **Bottom Row**: Contains the `Settings` toggle button and a live viewed/hidden job counter.
-- **Draggable Handle**: Reposition the badge anywhere on the screen.
-- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes.
-- **Auto-Cleanup**: When the script is `OFF`, the settings panel and secondary controls are automatically hidden to save space.
-
 ## Screenshot
 
 ![Screenshot of the badge and hidden jobs](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master/screenshot.png)
@@ -18,11 +11,11 @@ A userscript that automatically hides viewed job postings in LinkedIn Jobs.
 - **Dynamic Control**:
   - `ON/OFF` status toggle.
   - `Guard (ON/OFF)`: Scroll protection to prevent LinkedIn rate-limits. This is especially important when hiding jobs, as rapid scrolling through hundreds of hidden items can trigger bot-detection filters.
-  - `Open/Close Settings`: Toggle for the advanced options panel.
 - **Two-Layer Detection**:
   - `Hide Mode`: Automatically vanishes viewed jobs.
   - `Highlight Mode`: Keeps jobs visible but adds a visual border/badge (useful for manual filtering).
-- **Auto-UI Cleanup**: Hides secondary controls/settings when the main script is turned `OFF` to minimize screen footprint.
+- **Draggable Handle**: Reposition the badge anywhere on the screen.
+- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes.
 - **Live Counter**: Track `N viewed` or `N hidden` items in real-time.
 - **Persistence**: Remembers your preferences for `ON/OFF`, `Scroll Guard`, `Detection Mode`, and `Badge Position`.
 - **Robust Navigation**: Full support for LinkedIn's SPA routing; automatically restarts scanning when you switch pages or collections.
@@ -81,7 +74,8 @@ The script supports detection for the following languages:
 1. The script scans for viewed cards.
 1. When `OFF`, viewed jobs are not hidden; they are only counted.
 1. When `ON`, viewed jobs are hidden.
-1. If rapid downward scrolling is detected while most cards are viewed/hidden, the guard can enter a random cooldown (`5-10s`) and slow scroll steps to reduce LinkedIn rate-limit risk.
+1. If rapid downward scrolling is detected while most cards are viewed/hidden, the guard can enter a random cooldown (`5-15s`) and slow scroll steps to reduce LinkedIn rate-limit risk.
+1. If guard is triggered again while a cooldown is already active, the new cooldown is added on top of the remaining time (stacked), instead of restarting as separate back-to-back cooldowns.
 1. During cooldown, pagination controls inside `div.jobs-search-pagination` are temporarily disabled (including collections/search pagination buttons).
 1. Drag the badge using the handle on the left to reposition it.
 

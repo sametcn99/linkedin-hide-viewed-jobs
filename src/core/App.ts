@@ -408,11 +408,15 @@ export class App {
       this.countGrowthSinceCooldown += this.hiddenCount - previousHiddenCount;
     }
 
-    if (this.isCooldownActive) return;
     if (this.countGrowthSinceCooldown < App.COUNT_COOLDOWN_STEP) return;
 
-    this.countGrowthSinceCooldown -= App.COUNT_COOLDOWN_STEP;
-    this.startRandomCooldown();
+    const triggerCount = Math.floor(this.countGrowthSinceCooldown / App.COUNT_COOLDOWN_STEP);
+    this.countGrowthSinceCooldown -= triggerCount * App.COUNT_COOLDOWN_STEP;
+
+    // Collapse burst triggers into a single running countdown timeline.
+    for (let i = 0; i < triggerCount; i++) {
+      this.startRandomCooldown();
+    }
   }
 
   private resetCountBasedCooldownProgress(): void {
@@ -437,16 +441,22 @@ export class App {
     const maxMs = CONFIG.SCROLL_GUARD_COOLDOWN_MAX_MS;
     const durationMs = minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
 
-    this.isCooldownActive = true;
-    this.cooldownUntil = Date.now() + durationMs;
-    this.lastControlledScrollAt = 0;
-    this.syncPaginationCooldownClass();
+    if (this.isCooldownActive) {
+      this.cooldownUntil += durationMs;
+    } else {
+      this.isCooldownActive = true;
+      this.cooldownUntil = Date.now() + durationMs;
+      this.lastControlledScrollAt = 0;
+      this.syncPaginationCooldownClass();
+    }
+
+    const msUntilEnd = Math.max(0, this.cooldownUntil - Date.now());
 
     window.setTimeout(() => {
       if (!this.isCooldownActive) return;
       this.syncCooldownState();
       this.scheduleRefresh();
-    }, durationMs + 20);
+    }, msUntilEnd + 20);
   }
 
   private applyControlledScroll(deltaY: number): void {

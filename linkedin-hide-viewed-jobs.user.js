@@ -12,7 +12,7 @@
 // @name:zh-CN         LinkedIn 隐藏已查看职位
 // @name:ar            لينكدإن إخفاء الوظائف التي تمت مشاهدتها
 // @namespace          https://github.com/sametcn99
-// @version            1.1.0
+// @version            1.1.1
 // @author             sametcn99
 // @description        Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr     LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
@@ -73,7 +73,7 @@
     SCROLL_GUARD_TRIGGER_DELTA_PX: 900,
     SCROLL_GUARD_TRIGGER_WINDOW_MS: 1200,
     SCROLL_GUARD_COOLDOWN_MIN_MS: 5e3,
-    SCROLL_GUARD_COOLDOWN_MAX_MS: 1e4,
+    SCROLL_GUARD_COOLDOWN_MAX_MS: 15e3,
     SCROLL_GUARD_ALLOWED_STEP_PX: 110,
     SCROLL_GUARD_ALLOWED_STEP_MIN_INTERVAL_MS: 120,
     SCROLL_GUARD_MIN_VIEWED_DENSITY: 0.55,
@@ -1584,10 +1584,12 @@ scheduleRefresh() {
       if (this.hiddenCount > previousHiddenCount) {
         this.countGrowthSinceCooldown += this.hiddenCount - previousHiddenCount;
       }
-      if (this.isCooldownActive) return;
       if (this.countGrowthSinceCooldown < App.COUNT_COOLDOWN_STEP) return;
-      this.countGrowthSinceCooldown -= App.COUNT_COOLDOWN_STEP;
-      this.startRandomCooldown();
+      const triggerCount = Math.floor(this.countGrowthSinceCooldown / App.COUNT_COOLDOWN_STEP);
+      this.countGrowthSinceCooldown -= triggerCount * App.COUNT_COOLDOWN_STEP;
+      for (let i = 0; i < triggerCount; i++) {
+        this.startRandomCooldown();
+      }
     }
     resetCountBasedCooldownProgress() {
       this.countGrowthSinceCooldown = 0;
@@ -1606,15 +1608,20 @@ scheduleRefresh() {
       const minMs = CONFIG.SCROLL_GUARD_COOLDOWN_MIN_MS;
       const maxMs = CONFIG.SCROLL_GUARD_COOLDOWN_MAX_MS;
       const durationMs = minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
-      this.isCooldownActive = true;
-      this.cooldownUntil = Date.now() + durationMs;
-      this.lastControlledScrollAt = 0;
-      this.syncPaginationCooldownClass();
+      if (this.isCooldownActive) {
+        this.cooldownUntil += durationMs;
+      } else {
+        this.isCooldownActive = true;
+        this.cooldownUntil = Date.now() + durationMs;
+        this.lastControlledScrollAt = 0;
+        this.syncPaginationCooldownClass();
+      }
+      const msUntilEnd = Math.max(0, this.cooldownUntil - Date.now());
       window.setTimeout(() => {
         if (!this.isCooldownActive) return;
         this.syncCooldownState();
         this.scheduleRefresh();
-      }, durationMs + 20);
+      }, msUntilEnd + 20);
     }
     applyControlledScroll(deltaY) {
       const now = Date.now();
