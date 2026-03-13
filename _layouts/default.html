@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
+    <meta name="description" content="{{ site.description }}" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr"
+      crossorigin="anonymous"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at top, rgba(10, 102, 194, 0.12), transparent 28%),
+          linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+      }
+
+      .page-shell {
+        max-width: 960px;
+      }
+
+      .content-card {
+        background: rgba(255, 255, 255, 0.92);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+      }
+
+      .markdown-body img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 0.75rem;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+      }
+
+      .markdown-body pre {
+        padding: 1rem;
+        border-radius: 0.75rem;
+        background: #111827;
+        color: #f9fafb;
+        overflow-x: auto;
+      }
+
+      .markdown-body code {
+        color: inherit;
+      }
+
+      .markdown-body blockquote {
+        border-left: 4px solid #0a66c2;
+        padding-left: 1rem;
+        color: #475569;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container py-4 py-md-5">
+      <div class="page-shell mx-auto">
+        <div class="content-card rounded-4 p-4 p-md-5 markdown-body">
+          {{ content }}
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+title: LinkedIn Hide Viewed Jobs
+description: A userscript that automatically hides viewed job postings in LinkedIn Jobs.
+markdown: kramdown
+kramdown:
+  input: GFM
+permalink: pretty
+exclude:
+  - node_modules/
+  - src/
+  - bun.lock
+  - package.json
+  - tsconfig.json
+  - vite.config.ts
+  - eslint.config.js
