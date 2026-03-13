@@ -1,5 +1,18 @@
 title: LinkedIn Hide Viewed Jobs
-description: A userscript that automatically hides viewed job postings in LinkedIn Jobs.
+description: Privacy-first LinkedIn Jobs userscript that hides or highlights viewed job cards, preserves SPA compatibility, and includes scroll guard protections.
+lang: en
+url: https://sametcn99.github.io
+baseurl: /linkedin-hide-viewed-jobs
+image: /linkedin-hide-viewed-jobs/screenshot.png
+logo: /linkedin-hide-viewed-jobs/icons/android-chrome-512x512.png
+author: sametcn99
+repository_url: https://github.com/sametcn99/linkedin-hide-viewed-jobs
+keywords:
+  - linkedin hide viewed jobs
+  - linkedin userscript
+  - tampermonkey linkedin jobs
+  - violentmonkey linkedin jobs
+  - hide viewed jobs linkedin
 markdown: kramdown
 kramdown:
   input: GFM

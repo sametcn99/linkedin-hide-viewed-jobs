@@ -1,10 +1,27 @@
 # LinkedIn Hide Viewed Jobs
 
-A userscript that automatically hides viewed job postings in LinkedIn Jobs.
+Hide or highlight viewed job postings on LinkedIn Jobs with a privacy-first userscript built for Tampermonkey and Violentmonkey.
+
+This project focuses on three things: stable LinkedIn SPA behavior, high-confidence multilingual viewed/applied detection, and safer scrolling with guard and cooldown protections.
+
+## Quick Links
+
+- [Install userscript](#installation)
+- [GitHub Pages](#github-pages)
+- [Supported languages](#supported-languages)
+- [Project links](#project-links)
 
 ## Screenshot
 
 ![Screenshot of the badge and hidden jobs](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master/screenshot.png)
+
+## Project Links
+
+- Repository: [https://github.com/sametcn99/linkedin-hide-viewed-jobs](https://github.com/sametcn99/linkedin-hide-viewed-jobs)
+- Issues: [https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues](https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues)
+- Greasy Fork: [https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs](https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs)
+- Github Gist: [https://gist.github.com/sametcn99/66cf2c0da5c793d6f56763ece2b9027a](https://gist.github.com/sametcn99/66cf2c0da5c793d6f56763ece2b9027a)
+- OpenUserJS: [https://openuserjs.org/scripts/sametcn99/LinkedIn_Hide_Viewed_Jobs](https://openuserjs.org/scripts/sametcn99/LinkedIn_Hide_Viewed_Jobs)
 
 ## Features
 
@@ -46,6 +63,30 @@ Alternative:
 
 - Install directly from `@downloadURL`:
 - `https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main/linkedin-hide-viewed-jobs.user.js`
+
+## GitHub Pages
+
+This repository includes a GitHub Pages setup that renders this README through Jekyll with a dark Bootstrap layout.
+
+Included site assets:
+
+- `manifest` via `icons/site.webmanifest`
+- `robots.txt`
+- `sitemap.xml`
+- favicon and Apple touch icon links from `icons/`
+- Open Graph, Twitter, canonical, and JSON-LD metadata
+
+Publish flow:
+
+1. Open repository settings on GitHub.
+1. Go to `Pages`.
+1. Set `Build and deployment` to `Deploy from a branch`.
+1. Select the `master` branch and `/(root)` folder.
+1. Save.
+
+Published site URL:
+
+- `https://sametcn99.github.io/linkedin-hide-viewed-jobs/`
 
 ## Supported Languages
 
@@ -92,7 +133,9 @@ Text matching uses `normalize('NFD')` plus diacritic removal for more stable mul
 
 ## Customization
 
-You can customize these constants in `linkedin-hide-viewed-jobs.user.js`:
+Source-of-truth customization lives under `src/**` and the userscript bundle is generated from that source.
+
+Common knobs:
 
 - `VIEWED_KEYWORDS`: Add more languages/phrases
 - `JOB_CARD_SELECTORS`: Card selection scope
@@ -118,7 +161,7 @@ Contributions are welcome.
 
 1. Fork the repository.
 1. Create a feature branch (`feature/your-change`) or fix branch (`fix/your-change`).
-1. Make your changes in `linkedin-hide-viewed-jobs.user.js` and update `README.md` if behavior changes.
+1. Make source changes under `src/**` and update `README.md` if behavior changes.
 1. Test on LinkedIn Jobs pages to verify detection, badge UI, and toggle behavior.
 1. Open a pull request with a clear summary, before/after notes, and screenshots when UI is affected.
 
@@ -128,11 +171,3 @@ Guidelines:
 - Avoid unrelated refactors in the same pull request.
 - Preserve compatibility with Tampermonkey/Violentmonkey on Chrome, Edge, and Firefox.
 - If you add new language keywords, include only high-confidence terms to reduce false positives.
-
-## Project Links
-
-- Repository: [https://github.com/sametcn99/linkedin-hide-viewed-jobs](https://github.com/sametcn99/linkedin-hide-viewed-jobs)
-- Issues: [https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues](https://github.com/sametcn99/linkedin-hide-viewed-jobs/issues)
-- Greasy Fork: [https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs](https://greasyfork.org/scripts/567795-linkedin-hide-viewed-jobs)
-- Github Gist: [https://gist.github.com/sametcn99/66cf2c0da5c793d6f56763ece2b9027a](https://gist.github.com/sametcn99/66cf2c0da5c793d6f56763ece2b9027a)
-- OpenUserJS: [https://openuserjs.org/scripts/sametcn99/LinkedIn_Hide_Viewed_Jobs](https://openuserjs.org/scripts/sametcn99/LinkedIn_Hide_Viewed_Jobs)

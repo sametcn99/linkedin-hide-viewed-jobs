@@ -1,10 +1,40 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
     <meta name="description" content="{{ site.description }}" />
+    <meta name="keywords" content="{{ site.keywords | join: ', ' }}" />
+    <meta name="author" content="{{ site.author }}" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="application-name" content="{{ site.title }}" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="canonical" href="{{ site.url }}{{ site.baseurl }}{{ page.url }}" />
+    <link rel="icon" type="image/x-icon" href="{{ site.baseurl }}/icons/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ site.baseurl }}/icons/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ site.baseurl }}/icons/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ site.baseurl }}/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="{{ site.baseurl }}/icons/site.webmanifest" />
+    <meta name="msapplication-config" content="{{ site.baseurl }}/browserconfig.xml" />
+    <meta name="msapplication-TileColor" content="#0b1220" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en" />
+    <meta property="og:site_name" content="{{ site.title }}" />
+    <meta
+      property="og:title"
+      content="{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}"
+    />
+    <meta property="og:description" content="{{ site.description }}" />
+    <meta property="og:url" content="{{ site.url }}{{ site.baseurl }}{{ page.url }}" />
+    <meta property="og:image" content="{{ site.url }}{{ site.image }}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}"
+    />
+    <meta name="twitter:description" content="{{ site.description }}" />
+    <meta name="twitter:image" content="{{ site.url }}{{ site.image }}" />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -13,13 +43,15 @@
     />
     <style>
       :root {
-        color-scheme: light;
+        color-scheme: dark;
       }
 
       body {
+        color: #e5eef8;
         background:
-          radial-gradient(circle at top, rgba(10, 102, 194, 0.12), transparent 28%),
-          linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+          radial-gradient(circle at top, rgba(59, 130, 246, 0.2), transparent 30%),
+          linear-gradient(180deg, #020617 0%, #0f172a 55%, #111827 100%);
+        min-height: 100vh;
       }
 
       .page-shell {
@@ -27,45 +59,132 @@
       }
 
       .content-card {
-        background: rgba(255, 255, 255, 0.92);
-        -webkit-backdrop-filter: blur(8px);
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+        background: rgba(11, 18, 32, 0.78);
+        -webkit-backdrop-filter: blur(18px);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        box-shadow: 0 24px 80px rgba(2, 6, 23, 0.46);
+      }
+
+      .markdown-body {
+        color: #dbe7f3;
+      }
+
+      .markdown-body h1,
+      .markdown-body h2,
+      .markdown-body h3,
+      .markdown-body h4,
+      .markdown-body h5,
+      .markdown-body h6 {
+        color: #f8fafc;
+        letter-spacing: -0.02em;
+      }
+
+      .markdown-body h1 {
+        font-size: clamp(2.2rem, 4vw, 3.6rem);
+        line-height: 1.05;
+        margin-bottom: 1rem;
+      }
+
+      .markdown-body h2 {
+        margin-top: 2.75rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .markdown-body p,
+      .markdown-body li {
+        color: #cbd5e1;
+        font-size: 1.02rem;
+      }
+
+      .markdown-body a {
+        color: #7dd3fc;
+      }
+
+      .markdown-body a:hover {
+        color: #bae6fd;
+      }
+
+      .markdown-body strong {
+        color: #f8fafc;
       }
 
       .markdown-body img {
+        display: block;
         max-width: 100%;
         height: auto;
-        border-radius: 0.75rem;
-        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14);
+        margin: 1.5rem auto;
+        border-radius: 1rem;
+        border: 1px solid rgba(125, 211, 252, 0.18);
+        box-shadow: 0 24px 64px rgba(2, 6, 23, 0.45);
       }
 
       .markdown-body pre {
         padding: 1rem;
         border-radius: 0.75rem;
-        background: #111827;
-        color: #f9fafb;
+        background: #020617;
+        color: #e2e8f0;
         overflow-x: auto;
+        border: 1px solid rgba(148, 163, 184, 0.14);
       }
 
       .markdown-body code {
         color: inherit;
       }
 
+      .markdown-body :not(pre) > code {
+        background: rgba(148, 163, 184, 0.12);
+        padding: 0.15rem 0.4rem;
+        border-radius: 0.4rem;
+      }
+
       .markdown-body blockquote {
-        border-left: 4px solid #0a66c2;
+        border-left: 4px solid #38bdf8;
         padding-left: 1rem;
-        color: #475569;
+        color: #94a3b8;
+        background: rgba(15, 23, 42, 0.55);
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-radius: 0.5rem;
+      }
+
+      .markdown-body hr {
+        border-color: rgba(148, 163, 184, 0.16);
+        margin: 2rem 0;
+      }
+
+      .markdown-body table {
+        width: 100%;
+        margin-bottom: 1.5rem;
+      }
+
+      .markdown-body th,
+      .markdown-body td {
+        padding: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .markdown-body th {
+        background: rgba(30, 41, 59, 0.72);
+      }
+
+      @media (max-width: 767px) {
+        .content-card {
+          border-radius: 1.25rem;
+          padding: 1.25rem !important;
+        }
+
+        .markdown-body h1 {
+          font-size: 2rem;
+        }
       }
     </style>
   </head>
   <body>
     <main class="container py-4 py-md-5">
       <div class="page-shell mx-auto">
-        <div class="content-card rounded-4 p-4 p-md-5 markdown-body">
-          {{ content }}
-        </div>
+        <div class="content-card rounded-4 p-4 p-md-5 markdown-body">{{ content }}</div>
       </div>
     </main>
   </body>
