@@ -67,7 +67,7 @@ Alternative:
 
 ## GitHub Pages
 
-This repository includes a GitHub Pages setup that renders this README through Jekyll with a dark Bootstrap layout.
+This repository includes a GitHub Pages setup that renders this README through Jekyll with a polished dark editorial layout, a branded hero section, and responsive documentation styling.
 
 Included site assets:
 
