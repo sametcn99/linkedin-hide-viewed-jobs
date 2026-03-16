@@ -32,9 +32,10 @@ This project focuses on three things: stable LinkedIn SPA behavior, high-confide
   - `Hide Mode`: Automatically vanishes viewed jobs.
   - `Highlight Mode`: Keeps jobs visible but adds a visual border/badge (useful for manual filtering).
 - **Draggable Handle**: Reposition the badge anywhere on the screen.
-- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes.
+- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes and open the GitHub repository.
+- **Navigation Reload Toggle**: Choose whether SPA path changes should trigger a full page reload or stay on soft refresh.
 - **Live Counter**: Track `N viewed` or `N hidden` items in real-time.
-- **Persistence**: Remembers your preferences for `ON/OFF`, `Scroll Guard`, `Detection Mode`, and `Badge Position`.
+- **Persistence**: Remembers your preferences for `ON/OFF`, `Scroll Guard`, `Detection Mode`, `Navigation Reload`, and `Badge Position`.
 - **Robust Navigation**: Full support for LinkedIn's SPA routing; automatically restarts scanning when you switch pages or collections.
 - **Multilingual**: Intelligent keyword detection across 15+ languages.
 
@@ -115,6 +116,8 @@ The script supports detection for the following languages:
 1. The script scans for viewed cards.
 1. When `OFF`, viewed jobs are not hidden; they are only counted.
 1. When `ON`, viewed jobs are hidden.
+1. In settings, `Reload OFF` is the default. SPA navigation stays on soft refresh unless you explicitly enable `Reload ON`.
+1. The settings panel includes a direct `GitHub Repo` shortcut for the project source and issue tracker.
 1. If rapid downward scrolling is detected while most cards are viewed/hidden, the guard can enter a random cooldown (`5-15s`) and slow scroll steps to reduce LinkedIn rate-limit risk.
 1. If guard is triggered again while a cooldown is already active, the new cooldown is added on top of the remaining time (stacked), instead of restarting as separate back-to-back cooldowns.
 1. During cooldown, pagination controls inside `div.jobs-search-pagination` are temporarily disabled (including collections/search pagination buttons).

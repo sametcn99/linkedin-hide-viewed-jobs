@@ -27,6 +27,7 @@ export const DOM_IDS: IDomIdentifiers = Object.freeze({
   STORAGE_KEY: 'lhvj-show-hidden',
   SCROLL_GUARD_STORAGE_KEY: 'lhvj-scroll-guard-enabled',
   DETECTION_MODE_STORAGE_KEY: 'lhvj-detection-mode',
+  RELOAD_ON_NAVIGATION_STORAGE_KEY: 'lhvj-reload-on-navigation',
   UI_POSITION_KEY: 'lhvj-ui-position',
   HIDDEN_CLASS: 'lhvj-hidden-by-script',
   UI_ID: 'lhvj-toggle-root',

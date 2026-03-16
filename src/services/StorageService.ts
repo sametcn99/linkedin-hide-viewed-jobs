@@ -49,6 +49,14 @@ export class StorageService {
     this.setItem(DOM_IDS.DETECTION_MODE_STORAGE_KEY, mode);
   }
 
+  getReloadOnNavigation(): boolean {
+    return this.getItem(DOM_IDS.RELOAD_ON_NAVIGATION_STORAGE_KEY) === '1';
+  }
+
+  setReloadOnNavigation(value: boolean): void {
+    this.setItem(DOM_IDS.RELOAD_ON_NAVIGATION_STORAGE_KEY, value ? '1' : '0');
+  }
+
   getSavedPosition(): IPosition | null {
     try {
       const raw = this.getItem(DOM_IDS.UI_POSITION_KEY);

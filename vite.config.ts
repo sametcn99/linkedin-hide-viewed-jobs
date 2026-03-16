@@ -21,7 +21,7 @@ export default defineConfig({
           ar: 'لينكدإن إخفاء الوظائف التي تمت مشاهدتها',
         },
         namespace: 'https://github.com/sametcn99',
-        version: '1.1.1',
+        version: '1.1.2',
         description: {
           '': 'Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.',
           tr: 'LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.',

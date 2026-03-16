@@ -62,6 +62,7 @@ export interface IUIState {
   settingsPanel: HTMLDivElement | null;
   modeHideBtn: HTMLButtonElement | null;
   modeHighlightBtn: HTMLButtonElement | null;
+  reloadNavBtn: HTMLButtonElement | null;
 }
 
 /** Result from anchor-based viewed job detection */
@@ -75,6 +76,7 @@ export interface IDomIdentifiers {
   readonly STORAGE_KEY: string;
   readonly SCROLL_GUARD_STORAGE_KEY: string;
   readonly DETECTION_MODE_STORAGE_KEY: string;
+  readonly RELOAD_ON_NAVIGATION_STORAGE_KEY: string;
   readonly UI_POSITION_KEY: string;
   readonly HIDDEN_CLASS: string;
   readonly UI_ID: string;

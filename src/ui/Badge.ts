@@ -5,15 +5,19 @@ import { StorageService } from '../services/StorageService';
 type ToggleCallback = (checked: boolean) => void;
 type ScrollGuardToggleCallback = (enabled: boolean) => void;
 type DetectionModeChangeCallback = (mode: TDetectionMode) => void;
+type ReloadNavigationToggleCallback = (enabled: boolean) => void;
 
 /**
  * The draggable UI badge that shows viewed/hidden job counts.
  */
 export class Badge {
+  private static readonly REPOSITORY_URL = 'https://github.com/sametcn99/linkedin-hide-viewed-jobs';
+
   private readonly storage: StorageService;
   private readonly onToggle: ToggleCallback;
   private readonly onScrollGuardToggle: ScrollGuardToggleCallback;
   private readonly onDetectionModeChange: DetectionModeChangeCallback;
+  private readonly onReloadNavigationToggle: ReloadNavigationToggleCallback;
   private readonly state: IUIState = {
     root: null,
     countNum: null,
@@ -25,6 +29,7 @@ export class Badge {
     settingsPanel: null,
     modeHideBtn: null,
     modeHighlightBtn: null,
+    reloadNavBtn: null,
   };
   private isDragging = false;
 
@@ -32,19 +37,22 @@ export class Badge {
     storage: StorageService,
     onToggle: ToggleCallback,
     onScrollGuardToggle: ScrollGuardToggleCallback,
-    onDetectionModeChange: DetectionModeChangeCallback
+    onDetectionModeChange: DetectionModeChangeCallback,
+    onReloadNavigationToggle: ReloadNavigationToggleCallback
   ) {
     this.storage = storage;
     this.onToggle = onToggle;
     this.onScrollGuardToggle = onScrollGuardToggle;
     this.onDetectionModeChange = onDetectionModeChange;
+    this.onReloadNavigationToggle = onReloadNavigationToggle;
   }
 
   /** Create or reattach the badge, returns the root element */
   ensure(
     isEnabled: boolean,
     scrollGuardEnabled: boolean,
-    detectionMode: TDetectionMode
+    detectionMode: TDetectionMode,
+    reloadOnNavigationEnabled: boolean
   ): HTMLDivElement {
     if (this.state.root && document.body.contains(this.state.root)) {
       return this.state.root;
@@ -56,7 +64,7 @@ export class Badge {
       return root;
     }
 
-    root = this.buildDom(isEnabled, scrollGuardEnabled, detectionMode);
+    root = this.buildDom(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled);
     document.body.appendChild(root);
 
     const saved = this.storage.getSavedPosition();
@@ -74,6 +82,7 @@ export class Badge {
     isEnabled: boolean,
     scrollGuardEnabled: boolean,
     detectionMode: TDetectionMode,
+    reloadOnNavigationEnabled: boolean,
     cooldownSecondsLeft = 0
   ): void {
     const root = this.state.root;
@@ -86,7 +95,8 @@ export class Badge {
       !this.state.cooldownEl ||
       !this.state.settingsBtn ||
       !this.state.modeHideBtn ||
-      !this.state.modeHighlightBtn
+      !this.state.modeHighlightBtn ||
+      !this.state.reloadNavBtn
     ) {
       return;
     }
@@ -95,6 +105,7 @@ export class Badge {
     root.setAttribute('data-scroll-guard', scrollGuardEnabled ? '1' : '0');
     root.setAttribute('data-cooldown', cooldownSecondsLeft > 0 ? '1' : '0');
     root.setAttribute('data-detection-mode', detectionMode);
+    root.setAttribute('data-reload-on-navigation', reloadOnNavigationEnabled ? '1' : '0');
 
     if (!isEnabled && root.getAttribute('data-settings-open') === '1') {
       root.setAttribute('data-settings-open', '0');
@@ -115,6 +126,8 @@ export class Badge {
       'data-active',
       detectionMode === 'highlight' ? '1' : '0'
     );
+    this.state.reloadNavBtn.textContent = reloadOnNavigationEnabled ? 'Reload ON' : 'Reload OFF';
+    this.state.reloadNavBtn.setAttribute('data-active', reloadOnNavigationEnabled ? '1' : '0');
     this.state.settingsBtn.textContent =
       root.getAttribute('data-settings-open') === '1' ? 'Close settings' : 'Open settings';
   }
@@ -133,6 +146,7 @@ export class Badge {
     this.state.settingsPanel = null;
     this.state.modeHideBtn = null;
     this.state.modeHighlightBtn = null;
+    this.state.reloadNavBtn = null;
   }
 
   /** Clamp badge position within the viewport */
@@ -148,7 +162,8 @@ export class Badge {
   private buildDom(
     isEnabled: boolean,
     scrollGuardEnabled: boolean,
-    detectionMode: TDetectionMode
+    detectionMode: TDetectionMode,
+    reloadOnNavigationEnabled: boolean
   ): HTMLDivElement {
     const root = document.createElement('div');
     root.id = DOM_IDS.UI_ID;
@@ -156,6 +171,7 @@ export class Badge {
     root.setAttribute('data-enabled', isEnabled ? '1' : '0');
     root.setAttribute('data-scroll-guard', scrollGuardEnabled ? '1' : '0');
     root.setAttribute('data-detection-mode', detectionMode);
+    root.setAttribute('data-reload-on-navigation', reloadOnNavigationEnabled ? '1' : '0');
 
     const dragHandle = document.createElement('span');
     dragHandle.className = 'lhvj-drag-handle';
@@ -263,8 +279,42 @@ export class Badge {
 
     modeGroup.appendChild(modeHideBtn);
     modeGroup.appendChild(modeHighlightBtn);
+
+    const reloadLabel = document.createElement('span');
+    reloadLabel.className = 'lhvj-settings-label';
+    reloadLabel.textContent = 'Navigation:';
+
+    const reloadNavBtn = document.createElement('button');
+    reloadNavBtn.type = 'button';
+    reloadNavBtn.className = 'lhvj-mode-btn lhvj-reload-nav-btn';
+    reloadNavBtn.textContent = reloadOnNavigationEnabled ? 'Reload ON' : 'Reload OFF';
+    reloadNavBtn.setAttribute('data-active', reloadOnNavigationEnabled ? '1' : '0');
+    reloadNavBtn.setAttribute('aria-label', 'Toggle full page reload on navigation');
+    reloadNavBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const enabled = root.getAttribute('data-reload-on-navigation') !== '1';
+      this.onReloadNavigationToggle(enabled);
+    });
+
     settingsPanel.appendChild(modeLabel);
     settingsPanel.appendChild(modeGroup);
+    settingsPanel.appendChild(reloadLabel);
+    settingsPanel.appendChild(reloadNavBtn);
+
+    const repoLabel = document.createElement('span');
+    repoLabel.className = 'lhvj-settings-label';
+    repoLabel.textContent = 'Project:';
+
+    const repoLink = document.createElement('a');
+    repoLink.className = 'lhvj-link-btn';
+    repoLink.href = Badge.REPOSITORY_URL;
+    repoLink.target = '_blank';
+    repoLink.rel = 'noopener noreferrer';
+    repoLink.textContent = 'GitHub Repo';
+    repoLink.setAttribute('aria-label', 'Open the GitHub repository');
+
+    settingsPanel.appendChild(repoLabel);
+    settingsPanel.appendChild(repoLink);
 
     main.appendChild(stateEl);
     main.appendChild(guardBtn);
@@ -298,6 +348,7 @@ export class Badge {
     const modeButtons = root.querySelectorAll<HTMLButtonElement>('.lhvj-mode-btn');
     this.state.modeHideBtn = modeButtons[0] || null;
     this.state.modeHighlightBtn = modeButtons[1] || null;
+    this.state.reloadNavBtn = root.querySelector('.lhvj-reload-nav-btn');
   }
 
   private clampPosition(left: number, top: number, root: HTMLElement): IPosition {

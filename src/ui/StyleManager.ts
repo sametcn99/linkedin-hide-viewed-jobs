@@ -63,7 +63,6 @@ export class StyleManager {
 
       #${UI_ID}[data-settings-open="1"] {
         border-radius: 14px;
-        min-width: 262px;
       }
 
       #${UI_ID}[data-enabled="0"] {
@@ -325,7 +324,8 @@ export class StyleManager {
         display: none !important;
       }
 
-      #${UI_ID} .lhvj-mode-btn {
+      #${UI_ID} .lhvj-mode-btn,
+      #${UI_ID} .lhvj-link-btn {
         border: 1px solid rgba(255, 255, 255, 0.2);
         background: rgba(255, 255, 255, 0.06);
         color: #d4dde6;
@@ -335,9 +335,13 @@ export class StyleManager {
         letter-spacing: 0.28px;
         padding: 4px 8px;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
       }
 
-      #${UI_ID} .lhvj-mode-btn:hover {
+      #${UI_ID} .lhvj-mode-btn:hover,
+      #${UI_ID} .lhvj-link-btn:hover {
         background: rgba(255, 255, 255, 0.12);
       }
 
@@ -347,7 +351,8 @@ export class StyleManager {
         background: rgba(112, 181, 249, 0.24);
       }
 
-      #${UI_ID} .lhvj-mode-btn:focus-visible {
+      #${UI_ID} .lhvj-mode-btn:focus-visible,
+      #${UI_ID} .lhvj-link-btn:focus-visible {
         outline: 2px solid var(--lhvj-focus);
         outline-offset: 2px;
       }

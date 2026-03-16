@@ -20,6 +20,7 @@ export class App {
   private showHidden: boolean;
   private scrollGuardEnabled: boolean;
   private detectionMode: TDetectionMode;
+  private reloadOnNavigationEnabled: boolean;
   private hiddenCount = 0;
   private rafId = 0;
   private isRuntimeActive = false;
@@ -42,6 +43,7 @@ export class App {
     this.showHidden = this.storage.getShowHidden();
     this.scrollGuardEnabled = this.storage.getScrollGuardEnabled();
     this.detectionMode = this.storage.getDetectionMode();
+    this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation();
 
     this.badge = new Badge(
       this.storage,
@@ -67,6 +69,10 @@ export class App {
         this.detectionMode = mode;
         this.storage.setDetectionMode(mode);
         this.scheduleRefresh();
+      },
+      (enabled) => {
+        this.reloadOnNavigationEnabled = enabled;
+        this.storage.setReloadOnNavigation(enabled);
       }
     );
 
@@ -114,8 +120,8 @@ export class App {
   }
 
   private hardRestartRuntimeForPathChange(): void {
-    // In OFF mode, do not force a full page reload on SPA path changes.
-    if (!this.showHidden) {
+    // In OFF mode, or when the setting is disabled, keep SPA route changes as soft refreshes.
+    if (!this.showHidden || !this.reloadOnNavigationEnabled) {
       this.lastRouteChangeAt = Date.now();
       this.router.restartDomObserver();
       this.scheduleRefresh();
@@ -158,8 +164,20 @@ export class App {
       this.resetScrollCooldown();
       this.resetCountBasedCooldownProgress();
       this.clearDetectedVisualState();
-      this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode);
-      this.badge.updateCount(0, this.showHidden, this.scrollGuardEnabled, this.detectionMode, 0);
+      this.badge.ensure(
+        this.showHidden,
+        this.scrollGuardEnabled,
+        this.detectionMode,
+        this.reloadOnNavigationEnabled
+      );
+      this.badge.updateCount(
+        0,
+        this.showHidden,
+        this.scrollGuardEnabled,
+        this.detectionMode,
+        this.reloadOnNavigationEnabled,
+        0
+      );
       return;
     }
 
@@ -223,12 +241,18 @@ export class App {
 
     this.maybeStartCountBasedCooldown(previousHiddenCount);
 
-    this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode);
+    this.badge.ensure(
+      this.showHidden,
+      this.scrollGuardEnabled,
+      this.detectionMode,
+      this.reloadOnNavigationEnabled
+    );
     this.badge.updateCount(
       this.hiddenCount,
       this.showHidden,
       this.scrollGuardEnabled,
       this.detectionMode,
+      this.reloadOnNavigationEnabled,
       this.getCooldownSecondsLeft()
     );
   }
