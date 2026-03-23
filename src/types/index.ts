@@ -1,4 +1,15 @@
 export type TDetectionMode = 'hide' | 'highlight';
+export type TDetectedJobState = 'viewed' | 'applied';
+
+export interface IHighlightColors {
+  viewed: string;
+  applied: string;
+}
+
+export interface IHighlightSettings {
+  colors: IHighlightColors;
+  opacity: number;
+}
 
 /** User-configurable settings for the userscript */
 export interface IConfig {
@@ -21,7 +32,17 @@ export interface IConfig {
   /** Toggle viewed-card highlight feature */
   readonly ENABLE_HIGHLIGHT: boolean;
   /** Viewed-card highlight color */
-  readonly HIGHLIGHT_COLOR: string;
+  readonly VIEWED_HIGHLIGHT_COLOR: string;
+  /** Applied-card highlight color */
+  readonly APPLIED_HIGHLIGHT_COLOR: string;
+  /** Default full-card highlight opacity */
+  readonly HIGHLIGHT_OPACITY: number;
+  /** Minimum allowed highlight opacity */
+  readonly HIGHLIGHT_OPACITY_MIN: number;
+  /** Maximum allowed highlight opacity */
+  readonly HIGHLIGHT_OPACITY_MAX: number;
+  /** Highlight opacity slider step */
+  readonly HIGHLIGHT_OPACITY_STEP: number;
   /** Viewed-card highlight border-radius */
   readonly HIGHLIGHT_BORDER_RADIUS: string;
   /** Enable scroll cooldown guard by default */
@@ -63,12 +84,19 @@ export interface IUIState {
   modeHideBtn: HTMLButtonElement | null;
   modeHighlightBtn: HTMLButtonElement | null;
   reloadNavBtn: HTMLButtonElement | null;
+  viewedColorInput: HTMLInputElement | null;
+  appliedColorInput: HTMLInputElement | null;
+  viewedColorResetBtn: HTMLButtonElement | null;
+  appliedColorResetBtn: HTMLButtonElement | null;
+  opacityInput: HTMLInputElement | null;
+  opacityValue: HTMLSpanElement | null;
+  opacityResetBtn: HTMLButtonElement | null;
 }
 
 /** Result from anchor-based viewed job detection */
 export interface IAnchorDetectionResult {
-  viewedAnchorCount: number;
-  viewedAnchorCards: Set<HTMLElement>;
+  detectedAnchorCount: number;
+  detectedAnchorCards: Map<HTMLElement, TDetectedJobState>;
 }
 
 /** CSS class names and DOM IDs used by the script */
@@ -77,8 +105,12 @@ export interface IDomIdentifiers {
   readonly SCROLL_GUARD_STORAGE_KEY: string;
   readonly DETECTION_MODE_STORAGE_KEY: string;
   readonly RELOAD_ON_NAVIGATION_STORAGE_KEY: string;
+  readonly VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY: string;
+  readonly APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY: string;
+  readonly HIGHLIGHT_OPACITY_STORAGE_KEY: string;
   readonly UI_POSITION_KEY: string;
   readonly HIDDEN_CLASS: string;
   readonly UI_ID: string;
   readonly VIEWED_HIGHLIGHT_CLASS: string;
+  readonly APPLIED_HIGHLIGHT_CLASS: string;
 }

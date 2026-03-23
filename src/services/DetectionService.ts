@@ -1,4 +1,4 @@
-import type { IAnchorDetectionResult } from '../types';
+import type { IAnchorDetectionResult, TDetectedJobState } from '../types';
 import {
   CARD_SELECTOR_JOINED,
   MARKER_SELECTOR_JOINED,
@@ -28,36 +28,42 @@ export class DetectionService {
   }
 
   /** Find cards that are marked as viewed via marker selectors */
-  getViewedCardsFromMarkers(): Set<HTMLElement> {
-    const viewedCards = new Set<HTMLElement>();
+  getDetectedCardsFromMarkers(): Map<HTMLElement, TDetectedJobState> {
+    const detectedCards = new Map<HTMLElement, TDetectedJobState>();
     document.querySelectorAll<HTMLElement>(MARKER_SELECTOR_JOINED).forEach((node) => {
-      if (!this.isElementVisible(node) || !this.matcher.hasViewedText(node)) return;
+      if (!this.isElementVisible(node)) return;
+      const state = this.matcher.getDetectedStateFromElement(node);
+      if (!state) return;
       const card = this.getCardFromNode(node);
-      if (card) viewedCards.add(card);
+      if (card) this.setDetectedState(detectedCards, card, state);
     });
-    return viewedCards;
+    return detectedCards;
   }
 
   /** Full card-level scan for viewed status */
-  isViewedJobCard(card: HTMLElement): boolean {
-    if (this.matcher.hasViewedKeyword(card.className || '')) return true;
-    if (this.matcher.hasViewedText(card)) return true;
+  getDetectedJobState(card: HTMLElement): TDetectedJobState | null {
+    const classState = this.matcher.getDetectedStateFromText(card.className || '');
+    if (classState) return classState;
+
+    const cardState = this.matcher.getDetectedStateFromElement(card);
+    if (cardState) return cardState;
 
     const infoItems = card.querySelectorAll<HTMLElement>('ul li');
     for (let i = 0; i < infoItems.length; i++) {
-      if (this.isElementVisible(infoItems[i]) && this.matcher.hasViewedText(infoItems[i])) {
-        return true;
+      if (!this.isElementVisible(infoItems[i])) continue;
+      const state = this.matcher.getDetectedStateFromElement(infoItems[i]);
+      if (state) {
+        return state;
       }
     }
 
-    if (
-      this.cardContainsViewedInDescendants(
-        card,
-        '[aria-label], [title], span, small, div, p, time',
-        100
-      )
-    ) {
-      return true;
+    const descendantState = this.cardContainsDetectedStateInDescendants(
+      card,
+      '[aria-label], [title], span, small, div, p, time',
+      100
+    );
+    if (descendantState) {
+      return descendantState;
     }
 
     if (
@@ -65,61 +71,64 @@ export class DetectionService {
         'li.discovery-templates-entity-item, li[class*="discovery-templates-entity-item"]'
       )
     ) {
-      if (this.cardContainsViewedInDescendants(card, '*', 140)) return true;
+      return this.cardContainsDetectedStateInDescendants(card, '*', 140);
     }
 
-    return false;
+    return null;
   }
 
   /** Anchor-based detection for viewed jobs */
-  refreshViewedAnchors(showHidden: boolean): IAnchorDetectionResult {
-    let viewedAnchorCount = 0;
-    const viewedAnchorCards = new Set<HTMLElement>();
+  refreshDetectedAnchors(showHidden: boolean): IAnchorDetectionResult {
+    let detectedAnchorCount = 0;
+    const detectedAnchorCards = new Map<HTMLElement, TDetectedJobState>();
 
     if (!this.shouldUseAnchorDetection()) {
       this.restoreHiddenAnchors();
-      return { viewedAnchorCount, viewedAnchorCards };
+      return { detectedAnchorCount, detectedAnchorCards };
     }
 
     this.getPotentialViewedAnchors().forEach((node) => {
       const card = this.getCardFromAnchor(node);
       const scope = card || node.closest<HTMLElement>('li, article, div') || node;
       const hiddenByScript = node.getAttribute('data-lhvj-hidden-anchor') === '1';
-      const viewed = hiddenByScript && showHidden ? true : this.isViewedAnchor(node, scope);
+      const detectedState =
+        hiddenByScript && showHidden ? 'viewed' : this.getDetectedAnchorState(node, scope);
 
-      if (viewed) {
-        viewedAnchorCount++;
+      if (detectedState) {
+        detectedAnchorCount++;
         if (card) {
-          viewedAnchorCards.add(card);
+          this.setDetectedState(detectedAnchorCards, card, detectedState);
           this.applyVisibility(card, showHidden);
-          this.applyViewedHighlight(card, !showHidden);
+          this.applyDetectedHighlight(card, showHidden ? null : detectedState);
         }
       }
 
-      if (viewed || hiddenByScript) {
-        this.applyAnchorVisibility(node, viewed && showHidden);
+      if (detectedState || hiddenByScript) {
+        this.applyAnchorVisibility(node, !!detectedState && showHidden);
       }
     });
 
-    return { viewedAnchorCount, viewedAnchorCards };
+    return { detectedAnchorCount, detectedAnchorCards };
   }
 
   /** Fallback marker-based detection */
-  refreshJobsViewedCardsFallback(showHidden: boolean): Set<HTMLElement> {
-    const viewedCards = new Set<HTMLElement>();
-    if (!this.isJobsPage()) return viewedCards;
+  refreshDetectedCardsFallback(showHidden: boolean): Map<HTMLElement, TDetectedJobState> {
+    const detectedCards = new Map<HTMLElement, TDetectedJobState>();
+    if (!this.isJobsPage()) return detectedCards;
 
     document.querySelectorAll<HTMLElement>(MARKER_SELECTOR_JOINED).forEach((node) => {
-      if (!this.isElementVisible(node) || !this.matcher.hasViewedText(node)) return;
+      if (!this.isElementVisible(node)) return;
+      const state = this.matcher.getDetectedStateFromElement(node);
+      if (!state) return;
       const card = this.getCardFromViewedMarker(node);
       if (!card) return;
 
-      viewedCards.add(card);
+      this.setDetectedState(detectedCards, card, state);
       this.applyVisibility(card, showHidden);
-      this.applyViewedHighlight(card, !showHidden);
+      this.applyDetectedHighlight(card, showHidden ? null : state);
     });
 
-    return viewedCards;
+    return detectedCards;
   }
 
   applyVisibility(card: HTMLElement, shouldHide: boolean): void {
@@ -132,14 +141,22 @@ export class DetectionService {
     }
   }
 
-  applyViewedHighlight(card: HTMLElement, shouldHighlight: boolean): void {
-    const { VIEWED_HIGHLIGHT_CLASS } = DOM_IDS;
-    if (shouldHighlight) {
+  applyDetectedHighlight(card: HTMLElement, state: TDetectedJobState | null): void {
+    const { VIEWED_HIGHLIGHT_CLASS, APPLIED_HIGHLIGHT_CLASS } = DOM_IDS;
+
+    card.classList.remove(VIEWED_HIGHLIGHT_CLASS, APPLIED_HIGHLIGHT_CLASS);
+    card.removeAttribute('data-lhvj-viewed');
+    card.removeAttribute('data-lhvj-applied');
+
+    if (state === 'viewed') {
       card.classList.add(VIEWED_HIGHLIGHT_CLASS);
       card.setAttribute('data-lhvj-viewed', '1');
-    } else {
-      card.classList.remove(VIEWED_HIGHLIGHT_CLASS);
-      card.removeAttribute('data-lhvj-viewed');
+      return;
+    }
+
+    if (state === 'applied') {
+      card.classList.add(APPLIED_HIGHLIGHT_CLASS);
+      card.setAttribute('data-lhvj-applied', '1');
     }
   }
 
@@ -246,43 +263,74 @@ export class DetectionService {
     return Array.from(anchorSet);
   }
 
-  private isViewedAnchor(anchor: HTMLElement, scope: HTMLElement): boolean {
-    if (!this.isElementVisible(anchor)) return false;
-    if (this.matcher.hasViewedText(anchor)) return true;
+  private getDetectedAnchorState(
+    anchor: HTMLElement,
+    scope: HTMLElement
+  ): TDetectedJobState | null {
+    if (!this.isElementVisible(anchor)) return null;
+    const anchorState = this.matcher.getDetectedStateFromElement(anchor);
+    if (anchorState) return anchorState;
 
     const descendants = anchor.querySelectorAll<HTMLElement>('[aria-label], [title]');
     for (let i = 0; i < descendants.length; i++) {
-      if (this.isElementVisible(descendants[i]) && this.matcher.hasViewedText(descendants[i])) {
-        return true;
+      if (!this.isElementVisible(descendants[i])) continue;
+      const descendantState = this.matcher.getDetectedStateFromElement(descendants[i]);
+      if (descendantState) {
+        return descendantState;
       }
     }
 
-    if (scope && this.hasViewedStateInScope(scope)) return true;
-    return false;
+    if (scope) {
+      return this.getDetectedStateInScope(scope);
+    }
+
+    return null;
   }
 
-  private hasViewedStateInScope(scope: HTMLElement): boolean {
-    if (this.cardContainsViewedInDescendants(scope, MARKER_SELECTOR_JOINED, 24)) return true;
-    return this.cardContainsViewedInDescendants(
+  private getDetectedStateInScope(scope: HTMLElement): TDetectedJobState | null {
+    const markerState = this.cardContainsDetectedStateInDescendants(
+      scope,
+      MARKER_SELECTOR_JOINED,
+      24
+    );
+    if (markerState) return markerState;
+    return this.cardContainsDetectedStateInDescendants(
       scope,
       '[aria-label], [title], span, small, p, time, li',
       80
     );
   }
 
-  private cardContainsViewedInDescendants(
+  private cardContainsDetectedStateInDescendants(
     card: HTMLElement,
     selector: string,
     maxNodes: number
-  ): boolean {
+  ): TDetectedJobState | null {
     const nodes = card.querySelectorAll<HTMLElement>(selector);
     const limit = Math.min(nodes.length, maxNodes);
     for (let i = 0; i < limit; i++) {
-      if (this.isElementVisible(nodes[i]) && this.matcher.hasViewedText(nodes[i])) {
-        return true;
+      if (!this.isElementVisible(nodes[i])) continue;
+      const state = this.matcher.getDetectedStateFromElement(nodes[i]);
+      if (state === 'applied') {
+        return state;
+      }
+      if (state === 'viewed') {
+        return state;
       }
     }
-    return false;
+    return null;
+  }
+
+  private setDetectedState(
+    map: Map<HTMLElement, TDetectedJobState>,
+    card: HTMLElement,
+    state: TDetectedJobState
+  ): void {
+    const previous = map.get(card);
+    if (previous === 'applied') return;
+    if (state === 'applied' || !previous) {
+      map.set(card, state);
+    }
   }
 
   private applyAnchorVisibility(anchor: HTMLElement, shouldHide: boolean): void {

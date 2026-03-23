@@ -16,6 +16,9 @@ export default [
         ...globals.browser,
       },
       ecmaVersion: 'latest',
+      parserOptions: {
+        warnOnUnsupportedTypeScriptVersion: false,
+      },
       sourceType: 'module',
     },
     rules: {

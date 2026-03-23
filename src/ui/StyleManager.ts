@@ -1,24 +1,41 @@
 import { CONFIG, DOM_IDS } from '../constants';
+import type { IHighlightSettings } from '../types';
 
 /**
  * Injects and manages all CSS styles for the userscript.
  */
 export class StyleManager {
-  private injected = false;
+  private styleEl: HTMLStyleElement | null = null;
 
-  inject(): void {
-    if (this.injected || document.getElementById('lhvj-style')) return;
+  inject(settings: IHighlightSettings): void {
+    const existing = document.getElementById('lhvj-style') as HTMLStyleElement | null;
+    if (existing) {
+      this.styleEl = existing;
+      this.styleEl.textContent = this.buildCSS(settings);
+      return;
+    }
 
     const style = document.createElement('style');
     style.id = 'lhvj-style';
-    style.textContent = this.buildCSS();
+    style.textContent = this.buildCSS(settings);
     document.head.appendChild(style);
-    this.injected = true;
+    this.styleEl = style;
   }
 
-  private buildCSS(): string {
-    const { HIDDEN_CLASS, UI_ID, VIEWED_HIGHLIGHT_CLASS } = DOM_IDS;
-    const { UI_Z_INDEX, HIGHLIGHT_COLOR, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
+  updateHighlightStyles(settings: IHighlightSettings): void {
+    if (!this.styleEl || !document.head.contains(this.styleEl)) {
+      this.inject(settings);
+      return;
+    }
+
+    this.styleEl.textContent = this.buildCSS(settings);
+  }
+
+  private buildCSS(settings: IHighlightSettings): string {
+    const { HIDDEN_CLASS, UI_ID, VIEWED_HIGHLIGHT_CLASS, APPLIED_HIGHLIGHT_CLASS } = DOM_IDS;
+    const { UI_Z_INDEX, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
+    const viewedBackground = this.withAlpha(settings.colors.viewed, settings.opacity);
+    const appliedBackground = this.withAlpha(settings.colors.applied, settings.opacity);
 
     return /* css */ `
       .${HIDDEN_CLASS} {
@@ -308,6 +325,98 @@ export class StyleManager {
         color: #c5d1dc;
       }
 
+      #${UI_ID} .lhvj-color-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+      }
+
+      #${UI_ID} .lhvj-slider-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+
+      #${UI_ID} .lhvj-opacity-input {
+        flex: 1;
+        accent-color: #9fd8ff;
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-opacity-value {
+        min-width: 40px;
+        text-align: right;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.22px;
+        color: #d9e4ee;
+      }
+
+      #${UI_ID} .lhvj-color-control {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      #${UI_ID} .lhvj-color-caption {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.28px;
+        color: #dbe6ef;
+      }
+
+      #${UI_ID} .lhvj-color-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      #${UI_ID} .lhvj-color-input {
+        inline-size: 36px;
+        block-size: 28px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-color-input::-webkit-color-swatch-wrapper {
+        padding: 3px;
+      }
+
+      #${UI_ID} .lhvj-color-input::-webkit-color-swatch,
+      #${UI_ID} .lhvj-color-input::-moz-color-swatch {
+        border: none;
+        border-radius: 6px;
+      }
+
+      #${UI_ID} .lhvj-reset-btn {
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.05);
+        color: #cad6e2;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.28px;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-reset-btn:hover,
+      #${UI_ID} .lhvj-color-input:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      #${UI_ID} .lhvj-reset-btn:focus-visible,
+      #${UI_ID} .lhvj-color-input:focus-visible {
+        outline: 2px solid var(--lhvj-focus);
+        outline-offset: 2px;
+      }
+
       #${UI_ID} .lhvj-mode-group {
         display: inline-flex;
         align-items: center;
@@ -358,18 +467,31 @@ export class StyleManager {
       }
 
       .${VIEWED_HIGHLIGHT_CLASS} {
-        box-shadow: inset 0 0 0 2px ${HIGHLIGHT_COLOR} !important;
-        outline: 2px solid ${HIGHLIGHT_COLOR} !important;
-        outline-offset: -2px !important;
+        box-shadow: inset 0 0 0 999px ${viewedBackground} !important;
         border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
-        background-color: rgba(46, 204, 113, 0.06) !important;
+        background-color: ${viewedBackground} !important;
       }
 
       .${VIEWED_HIGHLIGHT_CLASS} .job-card-container,
       .${VIEWED_HIGHLIGHT_CLASS}[class*="job-card"],
       .${VIEWED_HIGHLIGHT_CLASS} > div {
-        box-shadow: inset 0 0 0 2px ${HIGHLIGHT_COLOR} !important;
+        box-shadow: inset 0 0 0 999px ${viewedBackground} !important;
         border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${viewedBackground} !important;
+      }
+
+      .${APPLIED_HIGHLIGHT_CLASS} {
+        box-shadow: inset 0 0 0 999px ${appliedBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${appliedBackground} !important;
+      }
+
+      .${APPLIED_HIGHLIGHT_CLASS} .job-card-container,
+      .${APPLIED_HIGHLIGHT_CLASS}[class*="job-card"],
+      .${APPLIED_HIGHLIGHT_CLASS} > div {
+        box-shadow: inset 0 0 0 999px ${appliedBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${appliedBackground} !important;
       }
 
       html.lhvj-pagination-cooldown div.jobs-search-pagination button,
@@ -386,5 +508,13 @@ export class StyleManager {
         }
       }
     `;
+  }
+
+  private withAlpha(hex: string, alpha: number): string {
+    const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : CONFIG.VIEWED_HIGHLIGHT_COLOR;
+    const red = parseInt(normalized.slice(1, 3), 16);
+    const green = parseInt(normalized.slice(3, 5), 16);
+    const blue = parseInt(normalized.slice(5, 7), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
   }
 }

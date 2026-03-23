@@ -1,7 +1,12 @@
 import { CONFIG, DOM_IDS } from '../constants';
 import { StorageService, KeywordMatcher, DetectionService, RouterService } from '../services';
 import { StyleManager, Badge } from '../ui';
-import type { TDetectionMode } from '../types';
+import type {
+  IHighlightColors,
+  IHighlightSettings,
+  TDetectedJobState,
+  TDetectionMode,
+} from '../types';
 
 /**
  * Main application orchestrator that wires all services together.
@@ -21,6 +26,8 @@ export class App {
   private scrollGuardEnabled: boolean;
   private detectionMode: TDetectionMode;
   private reloadOnNavigationEnabled: boolean;
+  private highlightColors: IHighlightColors;
+  private highlightOpacity: number;
   private hiddenCount = 0;
   private rafId = 0;
   private isRuntimeActive = false;
@@ -44,6 +51,8 @@ export class App {
     this.scrollGuardEnabled = this.storage.getScrollGuardEnabled();
     this.detectionMode = this.storage.getDetectionMode();
     this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation();
+    this.highlightColors = this.storage.getHighlightColors();
+    this.highlightOpacity = this.storage.getHighlightOpacity();
 
     this.badge = new Badge(
       this.storage,
@@ -73,6 +82,18 @@ export class App {
       (enabled) => {
         this.reloadOnNavigationEnabled = enabled;
         this.storage.setReloadOnNavigation(enabled);
+      },
+      (state, color) => {
+        this.updateHighlightColor(state, color);
+      },
+      (state) => {
+        this.resetHighlightColor(state);
+      },
+      (value) => {
+        this.updateHighlightOpacity(value);
+      },
+      () => {
+        this.resetHighlightOpacity();
       }
     );
 
@@ -84,7 +105,7 @@ export class App {
 
   /** Bootstrap the userscript */
   init(): void {
-    this.styleManager.inject();
+    this.styleManager.inject(this.getHighlightSettings());
     this.startRuntime();
     this.router.startObserving();
   }
@@ -168,7 +189,8 @@ export class App {
         this.showHidden,
         this.scrollGuardEnabled,
         this.detectionMode,
-        this.reloadOnNavigationEnabled
+        this.reloadOnNavigationEnabled,
+        this.getHighlightSettings()
       );
       this.badge.updateCount(
         0,
@@ -176,6 +198,7 @@ export class App {
         this.scrollGuardEnabled,
         this.detectionMode,
         this.reloadOnNavigationEnabled,
+        this.getHighlightSettings(),
         0
       );
       return;
@@ -193,51 +216,55 @@ export class App {
       this.router.queueRefresh(600);
     }
 
-    const viewedCardsFromMarkers = this.detection.getViewedCardsFromMarkers();
-    const viewedCards = new Set(viewedCardsFromMarkers);
+    const detectedCardsFromMarkers = this.detection.getDetectedCardsFromMarkers();
+    const detectedCards = new Map(detectedCardsFromMarkers);
 
     // Fallback: card-level scan
     for (const card of cards) {
-      if (!viewedCards.has(card) && this.detection.isViewedJobCard(card)) {
-        viewedCards.add(card);
+      const state = this.detection.getDetectedJobState(card);
+      if (state) {
+        this.setDetectedState(detectedCards, card, state);
       }
     }
 
-    this.hiddenCount = 0;
+    const shouldHideDetected = this.detectionMode === 'hide';
+    const anchorResult = this.detection.refreshDetectedAnchors(shouldHideDetected);
+    const fallbackCards = this.detection.refreshDetectedCardsFallback(shouldHideDetected);
+    const finalDetectedCards = new Map(detectedCards);
+
+    this.mergeDetectedCardStates(finalDetectedCards, anchorResult.detectedAnchorCards);
+    this.mergeDetectedCardStates(finalDetectedCards, fallbackCards);
+
+    const cardSet = new Set(cards);
 
     for (const card of cards) {
-      const viewed = viewedCards.has(card);
-      if (viewed) this.hiddenCount++;
-      this.detection.applyVisibility(card, viewed && this.detectionMode === 'hide');
-      this.detection.applyViewedHighlight(card, viewed && this.detectionMode === 'highlight');
+      const state = finalDetectedCards.get(card) ?? null;
+      this.detection.applyVisibility(card, !!state && shouldHideDetected);
+      this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
     }
 
-    const shouldHideDetected = this.detectionMode === 'hide';
-    const anchorResult = this.detection.refreshViewedAnchors(shouldHideDetected);
-    const fallbackCards = this.detection.refreshJobsViewedCardsFallback(shouldHideDetected);
-    const finalViewedCards = new Set(viewedCards);
-
-    anchorResult.viewedAnchorCards.forEach((c) => finalViewedCards.add(c));
-    fallbackCards.forEach((c) => finalViewedCards.add(c));
+    finalDetectedCards.forEach((state, card) => {
+      if (cardSet.has(card)) return;
+      this.detection.applyVisibility(card, shouldHideDetected);
+      this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
+    });
 
     // Clean up stale card states
     document.querySelectorAll<HTMLElement>('[data-lhvj-hidden="1"]').forEach((node) => {
-      if (!shouldHideDetected || !finalViewedCards.has(node)) {
+      if (!shouldHideDetected || !finalDetectedCards.has(node)) {
         this.detection.applyVisibility(node, false);
       }
     });
 
-    document.querySelectorAll<HTMLElement>('[data-lhvj-viewed="1"]').forEach((node) => {
-      if (!finalViewedCards.has(node) || shouldHideDetected) {
-        this.detection.applyViewedHighlight(node, false);
-      }
-    });
+    document
+      .querySelectorAll<HTMLElement>('[data-lhvj-viewed="1"], [data-lhvj-applied="1"]')
+      .forEach((node) => {
+        if (!finalDetectedCards.has(node) || shouldHideDetected) {
+          this.detection.applyDetectedHighlight(node, null);
+        }
+      });
 
-    this.hiddenCount = Math.max(
-      this.hiddenCount,
-      anchorResult.viewedAnchorCount,
-      fallbackCards.size
-    );
+    this.hiddenCount = Math.max(finalDetectedCards.size, anchorResult.detectedAnchorCount);
 
     this.maybeStartCountBasedCooldown(previousHiddenCount);
 
@@ -245,7 +272,8 @@ export class App {
       this.showHidden,
       this.scrollGuardEnabled,
       this.detectionMode,
-      this.reloadOnNavigationEnabled
+      this.reloadOnNavigationEnabled,
+      this.getHighlightSettings()
     );
     this.badge.updateCount(
       this.hiddenCount,
@@ -253,8 +281,75 @@ export class App {
       this.scrollGuardEnabled,
       this.detectionMode,
       this.reloadOnNavigationEnabled,
+      this.getHighlightSettings(),
       this.getCooldownSecondsLeft()
     );
+  }
+
+  private updateHighlightColor(state: TDetectedJobState, color: string): void {
+    if (state === 'viewed') {
+      this.storage.setViewedHighlightColor(color);
+    } else {
+      this.storage.setAppliedHighlightColor(color);
+    }
+
+    this.highlightColors = this.storage.getHighlightColors();
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+    this.scheduleRefresh();
+  }
+
+  private resetHighlightColor(state: TDetectedJobState): void {
+    if (state === 'viewed') {
+      this.storage.resetViewedHighlightColor();
+    } else {
+      this.storage.resetAppliedHighlightColor();
+    }
+
+    this.highlightColors = this.storage.getHighlightColors();
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+    this.scheduleRefresh();
+  }
+
+  private updateHighlightOpacity(value: number): void {
+    this.storage.setHighlightOpacity(value);
+    this.highlightOpacity = this.storage.getHighlightOpacity();
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+    this.scheduleRefresh();
+  }
+
+  private resetHighlightOpacity(): void {
+    this.storage.resetHighlightOpacity();
+    this.highlightOpacity = this.storage.getHighlightOpacity();
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+    this.scheduleRefresh();
+  }
+
+  private getHighlightSettings(): IHighlightSettings {
+    return {
+      colors: this.highlightColors,
+      opacity: this.highlightOpacity,
+    };
+  }
+
+  private mergeDetectedCardStates(
+    target: Map<HTMLElement, TDetectedJobState>,
+    source: Map<HTMLElement, TDetectedJobState>
+  ): void {
+    source.forEach((state, card) => {
+      this.setDetectedState(target, card, state);
+    });
+  }
+
+  private setDetectedState(
+    map: Map<HTMLElement, TDetectedJobState>,
+    card: HTMLElement,
+    state: TDetectedJobState
+  ): void {
+    const previous = map.get(card);
+    if (previous === 'applied') return;
+    if (state === 'applied' || !previous) {
+      map.set(card, state);
+    }
   }
 
   private onWindowResize = (): void => {
@@ -530,7 +625,11 @@ export class App {
     });
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-viewed="1"]').forEach((node) => {
-      this.detection.applyViewedHighlight(node, false);
+      this.detection.applyDetectedHighlight(node, null);
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-lhvj-applied="1"]').forEach((node) => {
+      this.detection.applyDetectedHighlight(node, null);
     });
 
     document.querySelectorAll<HTMLElement>('a[data-lhvj-hidden-anchor="1"]').forEach((node) => {

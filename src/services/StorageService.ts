@@ -1,4 +1,4 @@
-import type { IPosition, TDetectionMode } from '../types';
+import type { IHighlightColors, IPosition, TDetectionMode } from '../types';
 import { CONFIG, DOM_IDS } from '../constants';
 
 /**
@@ -57,6 +57,55 @@ export class StorageService {
     this.setItem(DOM_IDS.RELOAD_ON_NAVIGATION_STORAGE_KEY, value ? '1' : '0');
   }
 
+  getHighlightColors(): IHighlightColors {
+    return {
+      viewed: this.getHighlightColor(
+        DOM_IDS.VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY,
+        CONFIG.VIEWED_HIGHLIGHT_COLOR
+      ),
+      applied: this.getHighlightColor(
+        DOM_IDS.APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY,
+        CONFIG.APPLIED_HIGHLIGHT_COLOR
+      ),
+    };
+  }
+
+  setViewedHighlightColor(color: string): void {
+    this.setItem(
+      DOM_IDS.VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY,
+      this.normalizeHighlightColor(color, CONFIG.VIEWED_HIGHLIGHT_COLOR)
+    );
+  }
+
+  setAppliedHighlightColor(color: string): void {
+    this.setItem(
+      DOM_IDS.APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY,
+      this.normalizeHighlightColor(color, CONFIG.APPLIED_HIGHLIGHT_COLOR)
+    );
+  }
+
+  resetViewedHighlightColor(): void {
+    this.setViewedHighlightColor(CONFIG.VIEWED_HIGHLIGHT_COLOR);
+  }
+
+  resetAppliedHighlightColor(): void {
+    this.setAppliedHighlightColor(CONFIG.APPLIED_HIGHLIGHT_COLOR);
+  }
+
+  getHighlightOpacity(): number {
+    const raw = this.getItem(DOM_IDS.HIGHLIGHT_OPACITY_STORAGE_KEY);
+    return this.normalizeHighlightOpacity(raw, CONFIG.HIGHLIGHT_OPACITY);
+  }
+
+  setHighlightOpacity(value: number): void {
+    const normalized = this.normalizeHighlightOpacity(String(value), CONFIG.HIGHLIGHT_OPACITY);
+    this.setItem(DOM_IDS.HIGHLIGHT_OPACITY_STORAGE_KEY, normalized.toFixed(2));
+  }
+
+  resetHighlightOpacity(): void {
+    this.setHighlightOpacity(CONFIG.HIGHLIGHT_OPACITY);
+  }
+
   getSavedPosition(): IPosition | null {
     try {
       const raw = this.getItem(DOM_IDS.UI_POSITION_KEY);
@@ -81,5 +130,22 @@ export class StorageService {
 
   savePosition(pos: IPosition): void {
     this.setItem(DOM_IDS.UI_POSITION_KEY, JSON.stringify(pos));
+  }
+
+  private getHighlightColor(key: string, fallback: string): string {
+    const raw = this.getItem(key);
+    return this.normalizeHighlightColor(raw, fallback);
+  }
+
+  private normalizeHighlightColor(value: string | null, fallback: string): string {
+    if (!value) return fallback;
+    return /^#[0-9a-fA-F]{6}$/.test(value) ? value.toLowerCase() : fallback;
+  }
+
+  private normalizeHighlightOpacity(value: string | null, fallback: number): number {
+    if (!value) return fallback;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(CONFIG.HIGHLIGHT_OPACITY_MAX, Math.max(CONFIG.HIGHLIGHT_OPACITY_MIN, parsed));
   }
 }

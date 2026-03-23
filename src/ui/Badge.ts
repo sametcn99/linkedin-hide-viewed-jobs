@@ -1,4 +1,10 @@
-import type { IPosition, IUIState, TDetectionMode } from '../types';
+import type {
+  IHighlightSettings,
+  IPosition,
+  IUIState,
+  TDetectedJobState,
+  TDetectionMode,
+} from '../types';
 import { CONFIG, DOM_IDS } from '../constants';
 import { StorageService } from '../services/StorageService';
 
@@ -6,6 +12,10 @@ type ToggleCallback = (checked: boolean) => void;
 type ScrollGuardToggleCallback = (enabled: boolean) => void;
 type DetectionModeChangeCallback = (mode: TDetectionMode) => void;
 type ReloadNavigationToggleCallback = (enabled: boolean) => void;
+type HighlightColorChangeCallback = (state: TDetectedJobState, color: string) => void;
+type HighlightColorResetCallback = (state: TDetectedJobState) => void;
+type HighlightOpacityChangeCallback = (value: number) => void;
+type HighlightOpacityResetCallback = () => void;
 
 /**
  * The draggable UI badge that shows viewed/hidden job counts.
@@ -18,6 +28,10 @@ export class Badge {
   private readonly onScrollGuardToggle: ScrollGuardToggleCallback;
   private readonly onDetectionModeChange: DetectionModeChangeCallback;
   private readonly onReloadNavigationToggle: ReloadNavigationToggleCallback;
+  private readonly onHighlightColorChange: HighlightColorChangeCallback;
+  private readonly onHighlightColorReset: HighlightColorResetCallback;
+  private readonly onHighlightOpacityChange: HighlightOpacityChangeCallback;
+  private readonly onHighlightOpacityReset: HighlightOpacityResetCallback;
   private readonly state: IUIState = {
     root: null,
     countNum: null,
@@ -30,6 +44,13 @@ export class Badge {
     modeHideBtn: null,
     modeHighlightBtn: null,
     reloadNavBtn: null,
+    viewedColorInput: null,
+    appliedColorInput: null,
+    viewedColorResetBtn: null,
+    appliedColorResetBtn: null,
+    opacityInput: null,
+    opacityValue: null,
+    opacityResetBtn: null,
   };
   private isDragging = false;
 
@@ -38,13 +59,21 @@ export class Badge {
     onToggle: ToggleCallback,
     onScrollGuardToggle: ScrollGuardToggleCallback,
     onDetectionModeChange: DetectionModeChangeCallback,
-    onReloadNavigationToggle: ReloadNavigationToggleCallback
+    onReloadNavigationToggle: ReloadNavigationToggleCallback,
+    onHighlightColorChange: HighlightColorChangeCallback,
+    onHighlightColorReset: HighlightColorResetCallback,
+    onHighlightOpacityChange: HighlightOpacityChangeCallback,
+    onHighlightOpacityReset: HighlightOpacityResetCallback
   ) {
     this.storage = storage;
     this.onToggle = onToggle;
     this.onScrollGuardToggle = onScrollGuardToggle;
     this.onDetectionModeChange = onDetectionModeChange;
     this.onReloadNavigationToggle = onReloadNavigationToggle;
+    this.onHighlightColorChange = onHighlightColorChange;
+    this.onHighlightColorReset = onHighlightColorReset;
+    this.onHighlightOpacityChange = onHighlightOpacityChange;
+    this.onHighlightOpacityReset = onHighlightOpacityReset;
   }
 
   /** Create or reattach the badge, returns the root element */
@@ -52,7 +81,8 @@ export class Badge {
     isEnabled: boolean,
     scrollGuardEnabled: boolean,
     detectionMode: TDetectionMode,
-    reloadOnNavigationEnabled: boolean
+    reloadOnNavigationEnabled: boolean,
+    highlightSettings: IHighlightSettings
   ): HTMLDivElement {
     if (this.state.root && document.body.contains(this.state.root)) {
       return this.state.root;
@@ -64,7 +94,13 @@ export class Badge {
       return root;
     }
 
-    root = this.buildDom(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled);
+    root = this.buildDom(
+      isEnabled,
+      scrollGuardEnabled,
+      detectionMode,
+      reloadOnNavigationEnabled,
+      highlightSettings
+    );
     document.body.appendChild(root);
 
     const saved = this.storage.getSavedPosition();
@@ -83,6 +119,7 @@ export class Badge {
     scrollGuardEnabled: boolean,
     detectionMode: TDetectionMode,
     reloadOnNavigationEnabled: boolean,
+    highlightSettings: IHighlightSettings,
     cooldownSecondsLeft = 0
   ): void {
     const root = this.state.root;
@@ -96,7 +133,11 @@ export class Badge {
       !this.state.settingsBtn ||
       !this.state.modeHideBtn ||
       !this.state.modeHighlightBtn ||
-      !this.state.reloadNavBtn
+      !this.state.reloadNavBtn ||
+      !this.state.viewedColorInput ||
+      !this.state.appliedColorInput ||
+      !this.state.opacityInput ||
+      !this.state.opacityValue
     ) {
       return;
     }
@@ -126,6 +167,10 @@ export class Badge {
       'data-active',
       detectionMode === 'highlight' ? '1' : '0'
     );
+    this.state.viewedColorInput.value = highlightSettings.colors.viewed;
+    this.state.appliedColorInput.value = highlightSettings.colors.applied;
+    this.state.opacityInput.value = String(highlightSettings.opacity);
+    this.state.opacityValue.textContent = `${Math.round(highlightSettings.opacity * 100)}%`;
     this.state.reloadNavBtn.textContent = reloadOnNavigationEnabled ? 'Reload ON' : 'Reload OFF';
     this.state.reloadNavBtn.setAttribute('data-active', reloadOnNavigationEnabled ? '1' : '0');
     this.state.settingsBtn.textContent =
@@ -147,6 +192,13 @@ export class Badge {
     this.state.modeHideBtn = null;
     this.state.modeHighlightBtn = null;
     this.state.reloadNavBtn = null;
+    this.state.viewedColorInput = null;
+    this.state.appliedColorInput = null;
+    this.state.viewedColorResetBtn = null;
+    this.state.appliedColorResetBtn = null;
+    this.state.opacityInput = null;
+    this.state.opacityValue = null;
+    this.state.opacityResetBtn = null;
   }
 
   /** Clamp badge position within the viewport */
@@ -163,7 +215,8 @@ export class Badge {
     isEnabled: boolean,
     scrollGuardEnabled: boolean,
     detectionMode: TDetectionMode,
-    reloadOnNavigationEnabled: boolean
+    reloadOnNavigationEnabled: boolean,
+    highlightSettings: IHighlightSettings
   ): HTMLDivElement {
     const root = document.createElement('div');
     root.id = DOM_IDS.UI_ID;
@@ -301,6 +354,70 @@ export class Badge {
     settingsPanel.appendChild(reloadLabel);
     settingsPanel.appendChild(reloadNavBtn);
 
+    const colorLabel = document.createElement('span');
+    colorLabel.className = 'lhvj-settings-label';
+    colorLabel.textContent = 'Highlight colors:';
+
+    const colorGrid = document.createElement('div');
+    colorGrid.className = 'lhvj-color-grid';
+
+    const viewedColorControl = this.buildColorControl(
+      'Viewed',
+      highlightSettings.colors.viewed,
+      'viewed'
+    );
+    const appliedColorControl = this.buildColorControl(
+      'Applied',
+      highlightSettings.colors.applied,
+      'applied'
+    );
+
+    colorGrid.appendChild(viewedColorControl);
+    colorGrid.appendChild(appliedColorControl);
+
+    settingsPanel.appendChild(colorLabel);
+    settingsPanel.appendChild(colorGrid);
+
+    const opacityLabel = document.createElement('span');
+    opacityLabel.className = 'lhvj-settings-label';
+    opacityLabel.textContent = 'Filter opacity:';
+
+    const opacityRow = document.createElement('div');
+    opacityRow.className = 'lhvj-slider-row';
+
+    const opacityInput = document.createElement('input');
+    opacityInput.type = 'range';
+    opacityInput.className = 'lhvj-opacity-input';
+    opacityInput.min = String(CONFIG.HIGHLIGHT_OPACITY_MIN);
+    opacityInput.max = String(CONFIG.HIGHLIGHT_OPACITY_MAX);
+    opacityInput.step = String(CONFIG.HIGHLIGHT_OPACITY_STEP);
+    opacityInput.value = String(highlightSettings.opacity);
+    opacityInput.setAttribute('aria-label', 'Highlight filter opacity');
+    opacityInput.addEventListener('input', () => {
+      this.onHighlightOpacityChange(Number(opacityInput.value));
+    });
+
+    const opacityValue = document.createElement('span');
+    opacityValue.className = 'lhvj-opacity-value';
+    opacityValue.textContent = `${Math.round(highlightSettings.opacity * 100)}%`;
+
+    const opacityResetBtn = document.createElement('button');
+    opacityResetBtn.type = 'button';
+    opacityResetBtn.className = 'lhvj-reset-btn lhvj-opacity-reset';
+    opacityResetBtn.textContent = 'Reset';
+    opacityResetBtn.setAttribute('aria-label', 'Reset highlight opacity');
+    opacityResetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.onHighlightOpacityReset();
+    });
+
+    opacityRow.appendChild(opacityInput);
+    opacityRow.appendChild(opacityValue);
+    opacityRow.appendChild(opacityResetBtn);
+
+    settingsPanel.appendChild(opacityLabel);
+    settingsPanel.appendChild(opacityRow);
+
     const repoLabel = document.createElement('span');
     repoLabel.className = 'lhvj-settings-label';
     repoLabel.textContent = 'Project:';
@@ -349,6 +466,55 @@ export class Badge {
     this.state.modeHideBtn = modeButtons[0] || null;
     this.state.modeHighlightBtn = modeButtons[1] || null;
     this.state.reloadNavBtn = root.querySelector('.lhvj-reload-nav-btn');
+    this.state.viewedColorInput = root.querySelector('.lhvj-viewed-color-input');
+    this.state.appliedColorInput = root.querySelector('.lhvj-applied-color-input');
+    this.state.viewedColorResetBtn = root.querySelector('.lhvj-viewed-color-reset');
+    this.state.appliedColorResetBtn = root.querySelector('.lhvj-applied-color-reset');
+    this.state.opacityInput = root.querySelector('.lhvj-opacity-input');
+    this.state.opacityValue = root.querySelector('.lhvj-opacity-value');
+    this.state.opacityResetBtn = root.querySelector('.lhvj-opacity-reset');
+  }
+
+  private buildColorControl(
+    label: string,
+    value: string,
+    state: TDetectedJobState
+  ): HTMLDivElement {
+    const control = document.createElement('div');
+    control.className = 'lhvj-color-control';
+
+    const caption = document.createElement('span');
+    caption.className = 'lhvj-color-caption';
+    caption.textContent = label;
+
+    const actions = document.createElement('div');
+    actions.className = 'lhvj-color-actions';
+
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.className = `lhvj-color-input lhvj-${state}-color-input`;
+    input.value = value;
+    input.setAttribute('aria-label', `${label} highlight color`);
+    input.addEventListener('input', () => {
+      this.onHighlightColorChange(state, input.value);
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = `lhvj-reset-btn lhvj-${state}-color-reset`;
+    resetBtn.textContent = 'Reset';
+    resetBtn.setAttribute('aria-label', `Reset ${label.toLowerCase()} highlight color`);
+    resetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.onHighlightColorReset(state);
+    });
+
+    actions.appendChild(input);
+    actions.appendChild(resetBtn);
+    control.appendChild(caption);
+    control.appendChild(actions);
+
+    return control;
   }
 
   private clampPosition(left: number, top: number, root: HTMLElement): IPosition {

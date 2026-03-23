@@ -1,13 +1,18 @@
-import { VIEWED_KEYWORDS } from '../constants';
+import { APPLIED_KEYWORDS, VIEWED_KEYWORDS } from '../constants';
+import type { TDetectedJobState } from '../types';
 
 /**
  * Handles text normalization and keyword matching for viewed-job detection.
  */
 export class KeywordMatcher {
-  private readonly normalizedKeywords: string[];
+  private readonly normalizedViewedKeywords: string[];
+  private readonly normalizedAppliedKeywords: string[];
 
   constructor() {
-    this.normalizedKeywords = VIEWED_KEYWORDS.map((kw) => this.normalize(kw)).filter(
+    this.normalizedViewedKeywords = VIEWED_KEYWORDS.map((kw) => this.normalize(kw)).filter(
+      (kw) => kw.length > 0
+    );
+    this.normalizedAppliedKeywords = APPLIED_KEYWORDS.map((kw) => this.normalize(kw)).filter(
       (kw) => kw.length > 0
     );
   }
@@ -19,25 +24,40 @@ export class KeywordMatcher {
       .replace(/[\u0300-\u036f]/g, '');
   }
 
-  hasViewedKeyword(text: string): boolean {
+  getDetectedStateFromText(text: string): TDetectedJobState | null {
     const normalized = this.normalize(text);
-    if (!normalized) return false;
+    if (!normalized) return null;
 
-    for (const keyword of this.normalizedKeywords) {
-      if (this.containsKeywordExactly(normalized, keyword)) {
+    if (this.containsAnyKeyword(normalized, this.normalizedAppliedKeywords)) {
+      return 'applied';
+    }
+
+    if (this.containsAnyKeyword(normalized, this.normalizedViewedKeywords)) {
+      return 'viewed';
+    }
+
+    return null;
+  }
+
+  getDetectedStateFromElement(el: HTMLElement): TDetectedJobState | null {
+    const text = (el.textContent || '').trim();
+    const aria = el.getAttribute('aria-label') || '';
+    const title = el.getAttribute('title') || '';
+
+    return (
+      this.getDetectedStateFromText(text) ||
+      this.getDetectedStateFromText(aria) ||
+      this.getDetectedStateFromText(title)
+    );
+  }
+
+  private containsAnyKeyword(text: string, keywords: readonly string[]): boolean {
+    for (const keyword of keywords) {
+      if (this.containsKeywordExactly(text, keyword)) {
         return true;
       }
     }
     return false;
-  }
-
-  hasViewedText(el: HTMLElement): boolean {
-    const text = (el.textContent || '').trim();
-    const aria = el.getAttribute('aria-label') || '';
-    const title = el.getAttribute('title') || '';
-    return (
-      this.hasViewedKeyword(text) || this.hasViewedKeyword(aria) || this.hasViewedKeyword(title)
-    );
   }
 
   private containsKeywordExactly(text: string, keyword: string): boolean {

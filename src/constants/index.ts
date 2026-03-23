@@ -1,5 +1,5 @@
 export { CONFIG, DOM_IDS } from './config';
-export { VIEWED_KEYWORDS } from './keywords';
+export { VIEWED_KEYWORDS, APPLIED_KEYWORDS } from './keywords';
 export {
   JOB_CARD_SELECTORS,
   VIEWED_MARKER_SELECTORS,

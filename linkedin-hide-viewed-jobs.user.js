@@ -12,7 +12,7 @@
 // @name:zh-CN         LinkedIn 隐藏已查看职位
 // @name:ar            لينكدإن إخفاء الوظائف التي تمت مشاهدتها
 // @namespace          https://github.com/sametcn99
-// @version            1.1.2
+// @version            1.1.3
 // @author             sametcn99
 // @description        Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr     LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
@@ -65,7 +65,12 @@ var CONFIG = Object.freeze({
 		UI_Z_INDEX: 99999,
 		UI_EDGE_MARGIN: 8,
 		ENABLE_HIGHLIGHT: true,
-		HIGHLIGHT_COLOR: "rgba(46, 204, 113, 0.95)",
+		VIEWED_HIGHLIGHT_COLOR: "#2ecc71",
+		APPLIED_HIGHLIGHT_COLOR: "#f59e0b",
+		HIGHLIGHT_OPACITY: .1,
+		HIGHLIGHT_OPACITY_MIN: .04,
+		HIGHLIGHT_OPACITY_MAX: .28,
+		HIGHLIGHT_OPACITY_STEP: .01,
 		HIGHLIGHT_BORDER_RADIUS: "6px",
 		SCROLL_GUARD_ENABLED_DEFAULT: true,
 		SCROLL_GUARD_TRIGGER_DELTA_PX: 900,
@@ -82,62 +87,68 @@ var CONFIG = Object.freeze({
 		SCROLL_GUARD_STORAGE_KEY: "lhvj-scroll-guard-enabled",
 		DETECTION_MODE_STORAGE_KEY: "lhvj-detection-mode",
 		RELOAD_ON_NAVIGATION_STORAGE_KEY: "lhvj-reload-on-navigation",
+		VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY: "lhvj-viewed-highlight-color",
+		APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY: "lhvj-applied-highlight-color",
+		HIGHLIGHT_OPACITY_STORAGE_KEY: "lhvj-highlight-opacity",
 		UI_POSITION_KEY: "lhvj-ui-position",
 		HIDDEN_CLASS: "lhvj-hidden-by-script",
 		UI_ID: "lhvj-toggle-root",
-		VIEWED_HIGHLIGHT_CLASS: "lhvj-viewed-highlight"
+		VIEWED_HIGHLIGHT_CLASS: "lhvj-viewed-highlight",
+		APPLIED_HIGHLIGHT_CLASS: "lhvj-applied-highlight"
 	});
 	var VIEWED_KEYWORDS = Object.freeze([
 		"Viewed",
 		"Seen",
-		"Applied",
 		"Görüntülenen",
 		"Görüntülendi",
+		"Visto",
+		"Vistos",
+		"Visualizado",
+		"Visualizados",
+		"Vu",
+		"Vue",
+		"Angesehen",
+		"Gesehen",
+		"Visualizzato",
+		"Visto",
+		"Bekeken",
+		"Просмотрено",
+		"Wyświetlono",
+		"Visad",
+		"Sedd",
+		"已查看",
+		"已檢視",
+		"閲覧済み",
+		"조회됨",
+		"تمت المشاهدة",
+		"देखा गया"
+	]);
+	var APPLIED_KEYWORDS = Object.freeze([
+		"Applied",
 		"Başvurulan",
 		"Başvurulanlar",
 		"Başvuruldu",
-		"Visto",
-		"Vistos",
 		"Aplicado",
 		"Postulado",
-		"Visualizado",
-		"Visualizados",
 		"Candidatado",
 		"Candidatura",
-		"Vu",
-		"Vue",
 		"Postulé",
 		"Postulée",
 		"Candidature",
-		"Angesehen",
-		"Gesehen",
 		"Beworben",
-		"Visualizzato",
-		"Visto",
 		"Candidata",
 		"Candidati",
 		"Candidatura",
-		"Bekeken",
 		"Solliciteerd",
-		"Просмотрено",
 		"Откликнулся",
-		"Wyświetlono",
 		"Aplikowano",
-		"Visad",
-		"Sedd",
 		"Sökt",
-		"已查看",
 		"已申请",
-		"已檢視",
 		"已申請",
-		"閲覧済み",
 		"応募済み",
-		"조회됨",
 		"지원함",
 		"지원 완료",
-		"تمت المشاهدة",
 		"تم التقديم",
-		"देखा गया",
 		"आवेदन किया गया"
 	]);
 	var JOB_CARD_SELECTORS = Object.freeze([
@@ -241,6 +252,35 @@ var StorageService = class {
 		setReloadOnNavigation(value) {
 			this.setItem(DOM_IDS.RELOAD_ON_NAVIGATION_STORAGE_KEY, value ? "1" : "0");
 		}
+		getHighlightColors() {
+			return {
+				viewed: this.getHighlightColor(DOM_IDS.VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY, CONFIG.VIEWED_HIGHLIGHT_COLOR),
+				applied: this.getHighlightColor(DOM_IDS.APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY, CONFIG.APPLIED_HIGHLIGHT_COLOR)
+			};
+		}
+		setViewedHighlightColor(color) {
+			this.setItem(DOM_IDS.VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY, this.normalizeHighlightColor(color, CONFIG.VIEWED_HIGHLIGHT_COLOR));
+		}
+		setAppliedHighlightColor(color) {
+			this.setItem(DOM_IDS.APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY, this.normalizeHighlightColor(color, CONFIG.APPLIED_HIGHLIGHT_COLOR));
+		}
+		resetViewedHighlightColor() {
+			this.setViewedHighlightColor(CONFIG.VIEWED_HIGHLIGHT_COLOR);
+		}
+		resetAppliedHighlightColor() {
+			this.setAppliedHighlightColor(CONFIG.APPLIED_HIGHLIGHT_COLOR);
+		}
+		getHighlightOpacity() {
+			const raw = this.getItem(DOM_IDS.HIGHLIGHT_OPACITY_STORAGE_KEY);
+			return this.normalizeHighlightOpacity(raw, CONFIG.HIGHLIGHT_OPACITY);
+		}
+		setHighlightOpacity(value) {
+			const normalized = this.normalizeHighlightOpacity(String(value), CONFIG.HIGHLIGHT_OPACITY);
+			this.setItem(DOM_IDS.HIGHLIGHT_OPACITY_STORAGE_KEY, normalized.toFixed(2));
+		}
+		resetHighlightOpacity() {
+			this.setHighlightOpacity(CONFIG.HIGHLIGHT_OPACITY);
+		}
 		getSavedPosition() {
 			try {
 				const raw = this.getItem(DOM_IDS.UI_POSITION_KEY);
@@ -258,26 +298,47 @@ var StorageService = class {
 		savePosition(pos) {
 			this.setItem(DOM_IDS.UI_POSITION_KEY, JSON.stringify(pos));
 		}
+		getHighlightColor(key, fallback) {
+			const raw = this.getItem(key);
+			return this.normalizeHighlightColor(raw, fallback);
+		}
+		normalizeHighlightColor(value, fallback) {
+			if (!value) return fallback;
+			return /^#[0-9a-fA-F]{6}$/.test(value) ? value.toLowerCase() : fallback;
+		}
+		normalizeHighlightOpacity(value, fallback) {
+			if (!value) return fallback;
+			const parsed = Number(value);
+			if (!Number.isFinite(parsed)) return fallback;
+			return Math.min(CONFIG.HIGHLIGHT_OPACITY_MAX, Math.max(CONFIG.HIGHLIGHT_OPACITY_MIN, parsed));
+		}
 	};
 var KeywordMatcher = class {
-		normalizedKeywords;
+		normalizedViewedKeywords;
+		normalizedAppliedKeywords;
 		constructor() {
-			this.normalizedKeywords = VIEWED_KEYWORDS.map((kw) => this.normalize(kw)).filter((kw) => kw.length > 0);
+			this.normalizedViewedKeywords = VIEWED_KEYWORDS.map((kw) => this.normalize(kw)).filter((kw) => kw.length > 0);
+			this.normalizedAppliedKeywords = APPLIED_KEYWORDS.map((kw) => this.normalize(kw)).filter((kw) => kw.length > 0);
 		}
 		normalize(text) {
 			return (text || "").toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 		}
-		hasViewedKeyword(text) {
+		getDetectedStateFromText(text) {
 			const normalized = this.normalize(text);
-			if (!normalized) return false;
-			for (const keyword of this.normalizedKeywords) if (this.containsKeywordExactly(normalized, keyword)) return true;
-			return false;
+			if (!normalized) return null;
+			if (this.containsAnyKeyword(normalized, this.normalizedAppliedKeywords)) return "applied";
+			if (this.containsAnyKeyword(normalized, this.normalizedViewedKeywords)) return "viewed";
+			return null;
 		}
-		hasViewedText(el) {
+		getDetectedStateFromElement(el) {
 			const text = (el.textContent || "").trim();
 			const aria = el.getAttribute("aria-label") || "";
 			const title = el.getAttribute("title") || "";
-			return this.hasViewedKeyword(text) || this.hasViewedKeyword(aria) || this.hasViewedKeyword(title);
+			return this.getDetectedStateFromText(text) || this.getDetectedStateFromText(aria) || this.getDetectedStateFromText(title);
+		}
+		containsAnyKeyword(text, keywords) {
+			for (const keyword of keywords) if (this.containsKeywordExactly(text, keyword)) return true;
+			return false;
 		}
 		containsKeywordExactly(text, keyword) {
 			let fromIndex = 0;
@@ -313,68 +374,77 @@ getJobCards() {
 			});
 			return Array.from(cardSet);
 		}
-getViewedCardsFromMarkers() {
-			const viewedCards = new Set();
+getDetectedCardsFromMarkers() {
+			const detectedCards = new Map();
 			document.querySelectorAll(MARKER_SELECTOR_JOINED).forEach((node) => {
-				if (!this.isElementVisible(node) || !this.matcher.hasViewedText(node)) return;
+				if (!this.isElementVisible(node)) return;
+				const state = this.matcher.getDetectedStateFromElement(node);
+				if (!state) return;
 				const card = this.getCardFromNode(node);
-				if (card) viewedCards.add(card);
+				if (card) this.setDetectedState(detectedCards, card, state);
 			});
-			return viewedCards;
+			return detectedCards;
 		}
-isViewedJobCard(card) {
-			if (this.matcher.hasViewedKeyword(card.className || "")) return true;
-			if (this.matcher.hasViewedText(card)) return true;
+getDetectedJobState(card) {
+			const classState = this.matcher.getDetectedStateFromText(card.className || "");
+			if (classState) return classState;
+			const cardState = this.matcher.getDetectedStateFromElement(card);
+			if (cardState) return cardState;
 			const infoItems = card.querySelectorAll("ul li");
-			for (let i = 0; i < infoItems.length; i++) if (this.isElementVisible(infoItems[i]) && this.matcher.hasViewedText(infoItems[i])) return true;
-			if (this.cardContainsViewedInDescendants(card, "[aria-label], [title], span, small, div, p, time", 100)) return true;
-			if (card.matches("li.discovery-templates-entity-item, li[class*=\"discovery-templates-entity-item\"]")) {
-				if (this.cardContainsViewedInDescendants(card, "*", 140)) return true;
+			for (let i = 0; i < infoItems.length; i++) {
+				if (!this.isElementVisible(infoItems[i])) continue;
+				const state = this.matcher.getDetectedStateFromElement(infoItems[i]);
+				if (state) return state;
 			}
-			return false;
+			const descendantState = this.cardContainsDetectedStateInDescendants(card, "[aria-label], [title], span, small, div, p, time", 100);
+			if (descendantState) return descendantState;
+			if (card.matches("li.discovery-templates-entity-item, li[class*=\"discovery-templates-entity-item\"]")) return this.cardContainsDetectedStateInDescendants(card, "*", 140);
+			return null;
 		}
-refreshViewedAnchors(showHidden) {
-			let viewedAnchorCount = 0;
-			const viewedAnchorCards = new Set();
+refreshDetectedAnchors(showHidden) {
+			let detectedAnchorCount = 0;
+			const detectedAnchorCards = new Map();
 			if (!this.shouldUseAnchorDetection()) {
 				this.restoreHiddenAnchors();
 				return {
-					viewedAnchorCount,
-					viewedAnchorCards
+					detectedAnchorCount,
+					detectedAnchorCards
 				};
 			}
 			this.getPotentialViewedAnchors().forEach((node) => {
 				const card = this.getCardFromAnchor(node);
 				const scope = card || node.closest("li, article, div") || node;
 				const hiddenByScript = node.getAttribute("data-lhvj-hidden-anchor") === "1";
-				const viewed = hiddenByScript && showHidden ? true : this.isViewedAnchor(node, scope);
-				if (viewed) {
-					viewedAnchorCount++;
+				const detectedState = hiddenByScript && showHidden ? "viewed" : this.getDetectedAnchorState(node, scope);
+				if (detectedState) {
+					detectedAnchorCount++;
 					if (card) {
-						viewedAnchorCards.add(card);
+						this.setDetectedState(detectedAnchorCards, card, detectedState);
 						this.applyVisibility(card, showHidden);
-						this.applyViewedHighlight(card, !showHidden);
+						this.applyDetectedHighlight(card, showHidden ? null : detectedState);
 					}
 				}
-				if (viewed || hiddenByScript) this.applyAnchorVisibility(node, viewed && showHidden);
+				if (detectedState || hiddenByScript) this.applyAnchorVisibility(node, !!detectedState && showHidden);
 			});
 			return {
-				viewedAnchorCount,
-				viewedAnchorCards
+				detectedAnchorCount,
+				detectedAnchorCards
 			};
 		}
-refreshJobsViewedCardsFallback(showHidden) {
-			const viewedCards = new Set();
-			if (!this.isJobsPage()) return viewedCards;
+refreshDetectedCardsFallback(showHidden) {
+			const detectedCards = new Map();
+			if (!this.isJobsPage()) return detectedCards;
 			document.querySelectorAll(MARKER_SELECTOR_JOINED).forEach((node) => {
-				if (!this.isElementVisible(node) || !this.matcher.hasViewedText(node)) return;
+				if (!this.isElementVisible(node)) return;
+				const state = this.matcher.getDetectedStateFromElement(node);
+				if (!state) return;
 				const card = this.getCardFromViewedMarker(node);
 				if (!card) return;
-				viewedCards.add(card);
+				this.setDetectedState(detectedCards, card, state);
 				this.applyVisibility(card, showHidden);
-				this.applyViewedHighlight(card, !showHidden);
+				this.applyDetectedHighlight(card, showHidden ? null : state);
 			});
-			return viewedCards;
+			return detectedCards;
 		}
 		applyVisibility(card, shouldHide) {
 			if (shouldHide) {
@@ -385,14 +455,19 @@ refreshJobsViewedCardsFallback(showHidden) {
 				card.removeAttribute("data-lhvj-hidden");
 			}
 		}
-		applyViewedHighlight(card, shouldHighlight) {
-			const { VIEWED_HIGHLIGHT_CLASS } = DOM_IDS;
-			if (shouldHighlight) {
+		applyDetectedHighlight(card, state) {
+			const { VIEWED_HIGHLIGHT_CLASS, APPLIED_HIGHLIGHT_CLASS } = DOM_IDS;
+			card.classList.remove(VIEWED_HIGHLIGHT_CLASS, APPLIED_HIGHLIGHT_CLASS);
+			card.removeAttribute("data-lhvj-viewed");
+			card.removeAttribute("data-lhvj-applied");
+			if (state === "viewed") {
 				card.classList.add(VIEWED_HIGHLIGHT_CLASS);
 				card.setAttribute("data-lhvj-viewed", "1");
-			} else {
-				card.classList.remove(VIEWED_HIGHLIGHT_CLASS);
-				card.removeAttribute("data-lhvj-viewed");
+				return;
+			}
+			if (state === "applied") {
+				card.classList.add(APPLIED_HIGHLIGHT_CLASS);
+				card.setAttribute("data-lhvj-applied", "1");
 			}
 		}
 		isJobsPage() {
@@ -455,23 +530,39 @@ refreshJobsViewedCardsFallback(showHidden) {
 			});
 			return Array.from(anchorSet);
 		}
-		isViewedAnchor(anchor, scope) {
-			if (!this.isElementVisible(anchor)) return false;
-			if (this.matcher.hasViewedText(anchor)) return true;
+		getDetectedAnchorState(anchor, scope) {
+			if (!this.isElementVisible(anchor)) return null;
+			const anchorState = this.matcher.getDetectedStateFromElement(anchor);
+			if (anchorState) return anchorState;
 			const descendants = anchor.querySelectorAll("[aria-label], [title]");
-			for (let i = 0; i < descendants.length; i++) if (this.isElementVisible(descendants[i]) && this.matcher.hasViewedText(descendants[i])) return true;
-			if (scope && this.hasViewedStateInScope(scope)) return true;
-			return false;
+			for (let i = 0; i < descendants.length; i++) {
+				if (!this.isElementVisible(descendants[i])) continue;
+				const descendantState = this.matcher.getDetectedStateFromElement(descendants[i]);
+				if (descendantState) return descendantState;
+			}
+			if (scope) return this.getDetectedStateInScope(scope);
+			return null;
 		}
-		hasViewedStateInScope(scope) {
-			if (this.cardContainsViewedInDescendants(scope, MARKER_SELECTOR_JOINED, 24)) return true;
-			return this.cardContainsViewedInDescendants(scope, "[aria-label], [title], span, small, p, time, li", 80);
+		getDetectedStateInScope(scope) {
+			const markerState = this.cardContainsDetectedStateInDescendants(scope, MARKER_SELECTOR_JOINED, 24);
+			if (markerState) return markerState;
+			return this.cardContainsDetectedStateInDescendants(scope, "[aria-label], [title], span, small, p, time, li", 80);
 		}
-		cardContainsViewedInDescendants(card, selector, maxNodes) {
+		cardContainsDetectedStateInDescendants(card, selector, maxNodes) {
 			const nodes = card.querySelectorAll(selector);
 			const limit = Math.min(nodes.length, maxNodes);
-			for (let i = 0; i < limit; i++) if (this.isElementVisible(nodes[i]) && this.matcher.hasViewedText(nodes[i])) return true;
-			return false;
+			for (let i = 0; i < limit; i++) {
+				if (!this.isElementVisible(nodes[i])) continue;
+				const state = this.matcher.getDetectedStateFromElement(nodes[i]);
+				if (state === "applied") return state;
+				if (state === "viewed") return state;
+			}
+			return null;
+		}
+		setDetectedState(map, card, state) {
+			const previous = map.get(card);
+			if (previous === "applied") return;
+			if (state === "applied" || !previous) map.set(card, state);
 		}
 		applyAnchorVisibility(anchor, shouldHide) {
 			if (shouldHide) {
@@ -591,18 +682,32 @@ restartDomObserver() {
 		}
 	};
 var StyleManager = class {
-		injected = false;
-		inject() {
-			if (this.injected || document.getElementById("lhvj-style")) return;
+		styleEl = null;
+		inject(settings) {
+			const existing = document.getElementById("lhvj-style");
+			if (existing) {
+				this.styleEl = existing;
+				this.styleEl.textContent = this.buildCSS(settings);
+				return;
+			}
 			const style = document.createElement("style");
 			style.id = "lhvj-style";
-			style.textContent = this.buildCSS();
+			style.textContent = this.buildCSS(settings);
 			document.head.appendChild(style);
-			this.injected = true;
+			this.styleEl = style;
 		}
-		buildCSS() {
-			const { HIDDEN_CLASS, UI_ID, VIEWED_HIGHLIGHT_CLASS } = DOM_IDS;
-			const { UI_Z_INDEX, HIGHLIGHT_COLOR, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
+		updateHighlightStyles(settings) {
+			if (!this.styleEl || !document.head.contains(this.styleEl)) {
+				this.inject(settings);
+				return;
+			}
+			this.styleEl.textContent = this.buildCSS(settings);
+		}
+		buildCSS(settings) {
+			const { HIDDEN_CLASS, UI_ID, VIEWED_HIGHLIGHT_CLASS, APPLIED_HIGHLIGHT_CLASS } = DOM_IDS;
+			const { UI_Z_INDEX, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
+			const viewedBackground = this.withAlpha(settings.colors.viewed, settings.opacity);
+			const appliedBackground = this.withAlpha(settings.colors.applied, settings.opacity);
 			return `
       .${HIDDEN_CLASS} {
         height: 1px !important;
@@ -891,6 +996,98 @@ var StyleManager = class {
         color: #c5d1dc;
       }
 
+      #${UI_ID} .lhvj-color-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+      }
+
+      #${UI_ID} .lhvj-slider-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+      }
+
+      #${UI_ID} .lhvj-opacity-input {
+        flex: 1;
+        accent-color: #9fd8ff;
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-opacity-value {
+        min-width: 40px;
+        text-align: right;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.22px;
+        color: #d9e4ee;
+      }
+
+      #${UI_ID} .lhvj-color-control {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      #${UI_ID} .lhvj-color-caption {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.28px;
+        color: #dbe6ef;
+      }
+
+      #${UI_ID} .lhvj-color-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      #${UI_ID} .lhvj-color-input {
+        inline-size: 36px;
+        block-size: 28px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 9px;
+        background: rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-color-input::-webkit-color-swatch-wrapper {
+        padding: 3px;
+      }
+
+      #${UI_ID} .lhvj-color-input::-webkit-color-swatch,
+      #${UI_ID} .lhvj-color-input::-moz-color-swatch {
+        border: none;
+        border-radius: 6px;
+      }
+
+      #${UI_ID} .lhvj-reset-btn {
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.05);
+        color: #cad6e2;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.28px;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+
+      #${UI_ID} .lhvj-reset-btn:hover,
+      #${UI_ID} .lhvj-color-input:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      #${UI_ID} .lhvj-reset-btn:focus-visible,
+      #${UI_ID} .lhvj-color-input:focus-visible {
+        outline: 2px solid var(--lhvj-focus);
+        outline-offset: 2px;
+      }
+
       #${UI_ID} .lhvj-mode-group {
         display: inline-flex;
         align-items: center;
@@ -941,18 +1138,31 @@ var StyleManager = class {
       }
 
       .${VIEWED_HIGHLIGHT_CLASS} {
-        box-shadow: inset 0 0 0 2px ${HIGHLIGHT_COLOR} !important;
-        outline: 2px solid ${HIGHLIGHT_COLOR} !important;
-        outline-offset: -2px !important;
+        box-shadow: inset 0 0 0 999px ${viewedBackground} !important;
         border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
-        background-color: rgba(46, 204, 113, 0.06) !important;
+        background-color: ${viewedBackground} !important;
       }
 
       .${VIEWED_HIGHLIGHT_CLASS} .job-card-container,
       .${VIEWED_HIGHLIGHT_CLASS}[class*="job-card"],
       .${VIEWED_HIGHLIGHT_CLASS} > div {
-        box-shadow: inset 0 0 0 2px ${HIGHLIGHT_COLOR} !important;
+        box-shadow: inset 0 0 0 999px ${viewedBackground} !important;
         border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${viewedBackground} !important;
+      }
+
+      .${APPLIED_HIGHLIGHT_CLASS} {
+        box-shadow: inset 0 0 0 999px ${appliedBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${appliedBackground} !important;
+      }
+
+      .${APPLIED_HIGHLIGHT_CLASS} .job-card-container,
+      .${APPLIED_HIGHLIGHT_CLASS}[class*="job-card"],
+      .${APPLIED_HIGHLIGHT_CLASS} > div {
+        box-shadow: inset 0 0 0 999px ${appliedBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${appliedBackground} !important;
       }
 
       html.lhvj-pagination-cooldown div.jobs-search-pagination button,
@@ -970,6 +1180,10 @@ var StyleManager = class {
       }
     `;
 		}
+		withAlpha(hex, alpha) {
+			const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : CONFIG.VIEWED_HIGHLIGHT_COLOR;
+			return `rgba(${parseInt(normalized.slice(1, 3), 16)}, ${parseInt(normalized.slice(3, 5), 16)}, ${parseInt(normalized.slice(5, 7), 16)}, ${alpha})`;
+		}
 	};
 var Badge = class Badge {
 		static REPOSITORY_URL = "https://github.com/sametcn99/linkedin-hide-viewed-jobs";
@@ -978,6 +1192,10 @@ var Badge = class Badge {
 		onScrollGuardToggle;
 		onDetectionModeChange;
 		onReloadNavigationToggle;
+		onHighlightColorChange;
+		onHighlightColorReset;
+		onHighlightOpacityChange;
+		onHighlightOpacityReset;
 		state = {
 			root: null,
 			countNum: null,
@@ -989,33 +1207,44 @@ var Badge = class Badge {
 			settingsPanel: null,
 			modeHideBtn: null,
 			modeHighlightBtn: null,
-			reloadNavBtn: null
+			reloadNavBtn: null,
+			viewedColorInput: null,
+			appliedColorInput: null,
+			viewedColorResetBtn: null,
+			appliedColorResetBtn: null,
+			opacityInput: null,
+			opacityValue: null,
+			opacityResetBtn: null
 		};
 		isDragging = false;
-		constructor(storage, onToggle, onScrollGuardToggle, onDetectionModeChange, onReloadNavigationToggle) {
+		constructor(storage, onToggle, onScrollGuardToggle, onDetectionModeChange, onReloadNavigationToggle, onHighlightColorChange, onHighlightColorReset, onHighlightOpacityChange, onHighlightOpacityReset) {
 			this.storage = storage;
 			this.onToggle = onToggle;
 			this.onScrollGuardToggle = onScrollGuardToggle;
 			this.onDetectionModeChange = onDetectionModeChange;
 			this.onReloadNavigationToggle = onReloadNavigationToggle;
+			this.onHighlightColorChange = onHighlightColorChange;
+			this.onHighlightColorReset = onHighlightColorReset;
+			this.onHighlightOpacityChange = onHighlightOpacityChange;
+			this.onHighlightOpacityReset = onHighlightOpacityReset;
 		}
-ensure(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled) {
+ensure(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled, highlightSettings) {
 			if (this.state.root && document.body.contains(this.state.root)) return this.state.root;
 			let root = document.getElementById(DOM_IDS.UI_ID);
 			if (root) {
 				this.cacheElements(root);
 				return root;
 			}
-			root = this.buildDom(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled);
+			root = this.buildDom(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled, highlightSettings);
 			document.body.appendChild(root);
 			const saved = this.storage.getSavedPosition();
 			if (saved) this.applyPosition(root, saved.left, saved.top, false);
 			this.cacheElements(root);
 			return root;
 		}
-updateCount(count, isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled, cooldownSecondsLeft = 0) {
+updateCount(count, isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled, highlightSettings, cooldownSecondsLeft = 0) {
 			const root = this.state.root;
-			if (!root || !this.state.countNum || !this.state.countUnit || !this.state.stateEl || !this.state.guardBtn || !this.state.cooldownEl || !this.state.settingsBtn || !this.state.modeHideBtn || !this.state.modeHighlightBtn || !this.state.reloadNavBtn) return;
+			if (!root || !this.state.countNum || !this.state.countUnit || !this.state.stateEl || !this.state.guardBtn || !this.state.cooldownEl || !this.state.settingsBtn || !this.state.modeHideBtn || !this.state.modeHighlightBtn || !this.state.reloadNavBtn || !this.state.viewedColorInput || !this.state.appliedColorInput || !this.state.opacityInput || !this.state.opacityValue) return;
 			root.setAttribute("data-enabled", isEnabled ? "1" : "0");
 			root.setAttribute("data-scroll-guard", scrollGuardEnabled ? "1" : "0");
 			root.setAttribute("data-cooldown", cooldownSecondsLeft > 0 ? "1" : "0");
@@ -1032,6 +1261,10 @@ updateCount(count, isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigat
 			this.state.cooldownEl.textContent = cooldownSecondsLeft > 0 ? `CD ${cooldownSecondsLeft}s` : "";
 			this.state.modeHideBtn.setAttribute("data-active", detectionMode === "hide" ? "1" : "0");
 			this.state.modeHighlightBtn.setAttribute("data-active", detectionMode === "highlight" ? "1" : "0");
+			this.state.viewedColorInput.value = highlightSettings.colors.viewed;
+			this.state.appliedColorInput.value = highlightSettings.colors.applied;
+			this.state.opacityInput.value = String(highlightSettings.opacity);
+			this.state.opacityValue.textContent = `${Math.round(highlightSettings.opacity * 100)}%`;
 			this.state.reloadNavBtn.textContent = reloadOnNavigationEnabled ? "Reload ON" : "Reload OFF";
 			this.state.reloadNavBtn.setAttribute("data-active", reloadOnNavigationEnabled ? "1" : "0");
 			this.state.settingsBtn.textContent = root.getAttribute("data-settings-open") === "1" ? "Close settings" : "Open settings";
@@ -1050,6 +1283,13 @@ remove() {
 			this.state.modeHideBtn = null;
 			this.state.modeHighlightBtn = null;
 			this.state.reloadNavBtn = null;
+			this.state.viewedColorInput = null;
+			this.state.appliedColorInput = null;
+			this.state.viewedColorResetBtn = null;
+			this.state.appliedColorResetBtn = null;
+			this.state.opacityInput = null;
+			this.state.opacityValue = null;
+			this.state.opacityResetBtn = null;
 		}
 syncPositionWithinViewport() {
 			const root = document.getElementById(DOM_IDS.UI_ID);
@@ -1057,7 +1297,7 @@ syncPositionWithinViewport() {
 			const rect = root.getBoundingClientRect();
 			this.applyPosition(root, rect.left, rect.top, true);
 		}
-		buildDom(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled) {
+		buildDom(isEnabled, scrollGuardEnabled, detectionMode, reloadOnNavigationEnabled, highlightSettings) {
 			const root = document.createElement("div");
 			root.id = DOM_IDS.UI_ID;
 			root.setAttribute("data-settings-open", "0");
@@ -1170,6 +1410,50 @@ syncPositionWithinViewport() {
 			settingsPanel.appendChild(modeGroup);
 			settingsPanel.appendChild(reloadLabel);
 			settingsPanel.appendChild(reloadNavBtn);
+			const colorLabel = document.createElement("span");
+			colorLabel.className = "lhvj-settings-label";
+			colorLabel.textContent = "Highlight colors:";
+			const colorGrid = document.createElement("div");
+			colorGrid.className = "lhvj-color-grid";
+			const viewedColorControl = this.buildColorControl("Viewed", highlightSettings.colors.viewed, "viewed");
+			const appliedColorControl = this.buildColorControl("Applied", highlightSettings.colors.applied, "applied");
+			colorGrid.appendChild(viewedColorControl);
+			colorGrid.appendChild(appliedColorControl);
+			settingsPanel.appendChild(colorLabel);
+			settingsPanel.appendChild(colorGrid);
+			const opacityLabel = document.createElement("span");
+			opacityLabel.className = "lhvj-settings-label";
+			opacityLabel.textContent = "Filter opacity:";
+			const opacityRow = document.createElement("div");
+			opacityRow.className = "lhvj-slider-row";
+			const opacityInput = document.createElement("input");
+			opacityInput.type = "range";
+			opacityInput.className = "lhvj-opacity-input";
+			opacityInput.min = String(CONFIG.HIGHLIGHT_OPACITY_MIN);
+			opacityInput.max = String(CONFIG.HIGHLIGHT_OPACITY_MAX);
+			opacityInput.step = String(CONFIG.HIGHLIGHT_OPACITY_STEP);
+			opacityInput.value = String(highlightSettings.opacity);
+			opacityInput.setAttribute("aria-label", "Highlight filter opacity");
+			opacityInput.addEventListener("input", () => {
+				this.onHighlightOpacityChange(Number(opacityInput.value));
+			});
+			const opacityValue = document.createElement("span");
+			opacityValue.className = "lhvj-opacity-value";
+			opacityValue.textContent = `${Math.round(highlightSettings.opacity * 100)}%`;
+			const opacityResetBtn = document.createElement("button");
+			opacityResetBtn.type = "button";
+			opacityResetBtn.className = "lhvj-reset-btn lhvj-opacity-reset";
+			opacityResetBtn.textContent = "Reset";
+			opacityResetBtn.setAttribute("aria-label", "Reset highlight opacity");
+			opacityResetBtn.addEventListener("click", (e) => {
+				e.preventDefault();
+				this.onHighlightOpacityReset();
+			});
+			opacityRow.appendChild(opacityInput);
+			opacityRow.appendChild(opacityValue);
+			opacityRow.appendChild(opacityResetBtn);
+			settingsPanel.appendChild(opacityLabel);
+			settingsPanel.appendChild(opacityRow);
 			const repoLabel = document.createElement("span");
 			repoLabel.className = "lhvj-settings-label";
 			repoLabel.textContent = "Project:";
@@ -1209,6 +1493,44 @@ syncPositionWithinViewport() {
 			this.state.modeHideBtn = modeButtons[0] || null;
 			this.state.modeHighlightBtn = modeButtons[1] || null;
 			this.state.reloadNavBtn = root.querySelector(".lhvj-reload-nav-btn");
+			this.state.viewedColorInput = root.querySelector(".lhvj-viewed-color-input");
+			this.state.appliedColorInput = root.querySelector(".lhvj-applied-color-input");
+			this.state.viewedColorResetBtn = root.querySelector(".lhvj-viewed-color-reset");
+			this.state.appliedColorResetBtn = root.querySelector(".lhvj-applied-color-reset");
+			this.state.opacityInput = root.querySelector(".lhvj-opacity-input");
+			this.state.opacityValue = root.querySelector(".lhvj-opacity-value");
+			this.state.opacityResetBtn = root.querySelector(".lhvj-opacity-reset");
+		}
+		buildColorControl(label, value, state) {
+			const control = document.createElement("div");
+			control.className = "lhvj-color-control";
+			const caption = document.createElement("span");
+			caption.className = "lhvj-color-caption";
+			caption.textContent = label;
+			const actions = document.createElement("div");
+			actions.className = "lhvj-color-actions";
+			const input = document.createElement("input");
+			input.type = "color";
+			input.className = `lhvj-color-input lhvj-${state}-color-input`;
+			input.value = value;
+			input.setAttribute("aria-label", `${label} highlight color`);
+			input.addEventListener("input", () => {
+				this.onHighlightColorChange(state, input.value);
+			});
+			const resetBtn = document.createElement("button");
+			resetBtn.type = "button";
+			resetBtn.className = `lhvj-reset-btn lhvj-${state}-color-reset`;
+			resetBtn.textContent = "Reset";
+			resetBtn.setAttribute("aria-label", `Reset ${label.toLowerCase()} highlight color`);
+			resetBtn.addEventListener("click", (e) => {
+				e.preventDefault();
+				this.onHighlightColorReset(state);
+			});
+			actions.appendChild(input);
+			actions.appendChild(resetBtn);
+			control.appendChild(caption);
+			control.appendChild(actions);
+			return control;
 		}
 		clampPosition(left, top, root) {
 			const margin = CONFIG.UI_EDGE_MARGIN;
@@ -1272,6 +1594,8 @@ syncPositionWithinViewport() {
 		scrollGuardEnabled;
 		detectionMode;
 		reloadOnNavigationEnabled;
+		highlightColors;
+		highlightOpacity;
 		hiddenCount = 0;
 		rafId = 0;
 		isRuntimeActive = false;
@@ -1294,6 +1618,8 @@ syncPositionWithinViewport() {
 			this.scrollGuardEnabled = this.storage.getScrollGuardEnabled();
 			this.detectionMode = this.storage.getDetectionMode();
 			this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation();
+			this.highlightColors = this.storage.getHighlightColors();
+			this.highlightOpacity = this.storage.getHighlightOpacity();
 			this.badge = new Badge(this.storage, (checked) => {
 				this.showHidden = checked;
 				this.storage.setShowHidden(checked);
@@ -1317,11 +1643,19 @@ syncPositionWithinViewport() {
 			}, (enabled) => {
 				this.reloadOnNavigationEnabled = enabled;
 				this.storage.setReloadOnNavigation(enabled);
+			}, (state, color) => {
+				this.updateHighlightColor(state, color);
+			}, (state) => {
+				this.resetHighlightColor(state);
+			}, (value) => {
+				this.updateHighlightOpacity(value);
+			}, () => {
+				this.resetHighlightOpacity();
 			});
 			this.router = new RouterService(() => this.scheduleRefresh(), () => this.hardRestartRuntimeForPathChange());
 		}
 init() {
-			this.styleManager.inject();
+			this.styleManager.inject(this.getHighlightSettings());
 			this.startRuntime();
 			this.router.startObserving();
 		}
@@ -1395,8 +1729,8 @@ init() {
 				this.resetScrollCooldown();
 				this.resetCountBasedCooldownProgress();
 				this.clearDetectedVisualState();
-				this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled);
-				this.badge.updateCount(0, this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled, 0);
+				this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled, this.getHighlightSettings());
+				this.badge.updateCount(0, this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled, this.getHighlightSettings(), 0);
 				return;
 			}
 			if (!this.isCountCooldownPage()) this.resetCountBasedCooldownProgress();
@@ -1405,32 +1739,81 @@ init() {
 				this.router.queueRefresh(180);
 				this.router.queueRefresh(600);
 			}
-			const viewedCardsFromMarkers = this.detection.getViewedCardsFromMarkers();
-			const viewedCards = new Set(viewedCardsFromMarkers);
-			for (const card of cards) if (!viewedCards.has(card) && this.detection.isViewedJobCard(card)) viewedCards.add(card);
-			this.hiddenCount = 0;
+			const detectedCardsFromMarkers = this.detection.getDetectedCardsFromMarkers();
+			const detectedCards = new Map(detectedCardsFromMarkers);
 			for (const card of cards) {
-				const viewed = viewedCards.has(card);
-				if (viewed) this.hiddenCount++;
-				this.detection.applyVisibility(card, viewed && this.detectionMode === "hide");
-				this.detection.applyViewedHighlight(card, viewed && this.detectionMode === "highlight");
+				const state = this.detection.getDetectedJobState(card);
+				if (state) this.setDetectedState(detectedCards, card, state);
 			}
 			const shouldHideDetected = this.detectionMode === "hide";
-			const anchorResult = this.detection.refreshViewedAnchors(shouldHideDetected);
-			const fallbackCards = this.detection.refreshJobsViewedCardsFallback(shouldHideDetected);
-			const finalViewedCards = new Set(viewedCards);
-			anchorResult.viewedAnchorCards.forEach((c) => finalViewedCards.add(c));
-			fallbackCards.forEach((c) => finalViewedCards.add(c));
+			const anchorResult = this.detection.refreshDetectedAnchors(shouldHideDetected);
+			const fallbackCards = this.detection.refreshDetectedCardsFallback(shouldHideDetected);
+			const finalDetectedCards = new Map(detectedCards);
+			this.mergeDetectedCardStates(finalDetectedCards, anchorResult.detectedAnchorCards);
+			this.mergeDetectedCardStates(finalDetectedCards, fallbackCards);
+			const cardSet = new Set(cards);
+			for (const card of cards) {
+				const state = finalDetectedCards.get(card) ?? null;
+				this.detection.applyVisibility(card, !!state && shouldHideDetected);
+				this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
+			}
+			finalDetectedCards.forEach((state, card) => {
+				if (cardSet.has(card)) return;
+				this.detection.applyVisibility(card, shouldHideDetected);
+				this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
+			});
 			document.querySelectorAll("[data-lhvj-hidden=\"1\"]").forEach((node) => {
-				if (!shouldHideDetected || !finalViewedCards.has(node)) this.detection.applyVisibility(node, false);
+				if (!shouldHideDetected || !finalDetectedCards.has(node)) this.detection.applyVisibility(node, false);
 			});
-			document.querySelectorAll("[data-lhvj-viewed=\"1\"]").forEach((node) => {
-				if (!finalViewedCards.has(node) || shouldHideDetected) this.detection.applyViewedHighlight(node, false);
+			document.querySelectorAll("[data-lhvj-viewed=\"1\"], [data-lhvj-applied=\"1\"]").forEach((node) => {
+				if (!finalDetectedCards.has(node) || shouldHideDetected) this.detection.applyDetectedHighlight(node, null);
 			});
-			this.hiddenCount = Math.max(this.hiddenCount, anchorResult.viewedAnchorCount, fallbackCards.size);
+			this.hiddenCount = Math.max(finalDetectedCards.size, anchorResult.detectedAnchorCount);
 			this.maybeStartCountBasedCooldown(previousHiddenCount);
-			this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled);
-			this.badge.updateCount(this.hiddenCount, this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled, this.getCooldownSecondsLeft());
+			this.badge.ensure(this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled, this.getHighlightSettings());
+			this.badge.updateCount(this.hiddenCount, this.showHidden, this.scrollGuardEnabled, this.detectionMode, this.reloadOnNavigationEnabled, this.getHighlightSettings(), this.getCooldownSecondsLeft());
+		}
+		updateHighlightColor(state, color) {
+			if (state === "viewed") this.storage.setViewedHighlightColor(color);
+			else this.storage.setAppliedHighlightColor(color);
+			this.highlightColors = this.storage.getHighlightColors();
+			this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+			this.scheduleRefresh();
+		}
+		resetHighlightColor(state) {
+			if (state === "viewed") this.storage.resetViewedHighlightColor();
+			else this.storage.resetAppliedHighlightColor();
+			this.highlightColors = this.storage.getHighlightColors();
+			this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+			this.scheduleRefresh();
+		}
+		updateHighlightOpacity(value) {
+			this.storage.setHighlightOpacity(value);
+			this.highlightOpacity = this.storage.getHighlightOpacity();
+			this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+			this.scheduleRefresh();
+		}
+		resetHighlightOpacity() {
+			this.storage.resetHighlightOpacity();
+			this.highlightOpacity = this.storage.getHighlightOpacity();
+			this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+			this.scheduleRefresh();
+		}
+		getHighlightSettings() {
+			return {
+				colors: this.highlightColors,
+				opacity: this.highlightOpacity
+			};
+		}
+		mergeDetectedCardStates(target, source) {
+			source.forEach((state, card) => {
+				this.setDetectedState(target, card, state);
+			});
+		}
+		setDetectedState(map, card, state) {
+			const previous = map.get(card);
+			if (previous === "applied") return;
+			if (state === "applied" || !previous) map.set(card, state);
 		}
 		onWindowResize = () => {
 			this.badge.syncPositionWithinViewport();
@@ -1626,7 +2009,10 @@ init() {
 				this.detection.applyVisibility(node, false);
 			});
 			document.querySelectorAll("[data-lhvj-viewed=\"1\"]").forEach((node) => {
-				this.detection.applyViewedHighlight(node, false);
+				this.detection.applyDetectedHighlight(node, null);
+			});
+			document.querySelectorAll("[data-lhvj-applied=\"1\"]").forEach((node) => {
+				this.detection.applyDetectedHighlight(node, null);
 			});
 			document.querySelectorAll("a[data-lhvj-hidden-anchor=\"1\"]").forEach((node) => {
 				node.classList.remove(HIDDEN_CLASS);
