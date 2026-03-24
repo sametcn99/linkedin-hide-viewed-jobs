@@ -12,7 +12,7 @@
 // @name:zh-CN         LinkedIn 隐藏已查看职位
 // @name:ar            لينكدإن إخفاء الوظائف التي تمت مشاهدتها
 // @namespace          https://github.com/sametcn99
-// @version            1.1.4
+// @version            1.1.5
 // @author             sametcn99
 // @description        Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.
 // @description:tr     LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.
@@ -54,7 +54,7 @@
 // @noframes
 // ==/UserScript==
 
-(function () {
+(function() {
 	//#region \0./main-BbuNg8xE.js
 	var t = Object.freeze({
 		POLL_INTERVAL_MS: 2e3,
@@ -200,7 +200,7 @@
 		setItem(t, n) {
 			try {
 				window.localStorage.setItem(t, n);
-			} catch { }
+			} catch {}
 		}
 		getShowHidden() {
 			return "1" === this.getItem(n.STORAGE_KEY);
@@ -419,7 +419,7 @@
 			try {
 				const n = t.getClientRects();
 				if (n && 0 === n.length) return 0;
-			} catch { }
+			} catch {}
 			return 1;
 		}
 		getCardFromNode(t) {
@@ -572,7 +572,7 @@
 		}
 		wrapHistoryMethod(t, n) {
 			const i = history[t];
-			"function" == typeof i && (history[t] = function (...t) {
+			"function" == typeof i && (history[t] = function(...t) {
 				const e = i.apply(this, t);
 				return n(), e;
 			});
