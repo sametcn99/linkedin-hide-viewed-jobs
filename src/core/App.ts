@@ -6,6 +6,7 @@ import type {
   IHighlightSettings,
   TDetectedJobState,
   TDetectionMode,
+  THighlightColorTarget,
 } from '../types';
 
 /**
@@ -236,17 +237,20 @@ export class App {
     this.mergeDetectedCardStates(finalDetectedCards, fallbackCards);
 
     const cardSet = new Set(cards);
+    const activeCards = this.detection.getActiveCards(cardSet);
 
     for (const card of cards) {
       const state = finalDetectedCards.get(card) ?? null;
       this.detection.applyVisibility(card, !!state && shouldHideDetected);
       this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
+      this.detection.applyActiveHighlight(card, activeCards.has(card));
     }
 
     finalDetectedCards.forEach((state, card) => {
       if (cardSet.has(card)) return;
       this.detection.applyVisibility(card, shouldHideDetected);
       this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
+      this.detection.applyActiveHighlight(card, activeCards.has(card));
     });
 
     // Clean up stale card states
@@ -263,6 +267,12 @@ export class App {
           this.detection.applyDetectedHighlight(node, null);
         }
       });
+
+    document.querySelectorAll<HTMLElement>('[data-lhvj-active="1"]').forEach((node) => {
+      if (!activeCards.has(node)) {
+        this.detection.applyActiveHighlight(node, false);
+      }
+    });
 
     this.hiddenCount = Math.max(finalDetectedCards.size, anchorResult.detectedAnchorCount);
 
@@ -286,11 +296,13 @@ export class App {
     );
   }
 
-  private updateHighlightColor(state: TDetectedJobState, color: string): void {
-    if (state === 'viewed') {
+  private updateHighlightColor(target: THighlightColorTarget, color: string): void {
+    if (target === 'viewed') {
       this.storage.setViewedHighlightColor(color);
-    } else {
+    } else if (target === 'applied') {
       this.storage.setAppliedHighlightColor(color);
+    } else {
+      this.storage.setActiveHighlightColor(color);
     }
 
     this.highlightColors = this.storage.getHighlightColors();
@@ -298,11 +310,13 @@ export class App {
     this.scheduleRefresh();
   }
 
-  private resetHighlightColor(state: TDetectedJobState): void {
-    if (state === 'viewed') {
+  private resetHighlightColor(target: THighlightColorTarget): void {
+    if (target === 'viewed') {
       this.storage.resetViewedHighlightColor();
-    } else {
+    } else if (target === 'applied') {
       this.storage.resetAppliedHighlightColor();
+    } else {
+      this.storage.resetActiveHighlightColor();
     }
 
     this.highlightColors = this.storage.getHighlightColors();
@@ -630,6 +644,10 @@ export class App {
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-applied="1"]').forEach((node) => {
       this.detection.applyDetectedHighlight(node, null);
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-lhvj-active="1"]').forEach((node) => {
+      this.detection.applyActiveHighlight(node, false);
     });
 
     document.querySelectorAll<HTMLElement>('a[data-lhvj-hidden-anchor="1"]').forEach((node) => {

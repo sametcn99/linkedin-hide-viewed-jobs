@@ -32,10 +32,17 @@ export class StyleManager {
   }
 
   private buildCSS(settings: IHighlightSettings): string {
-    const { HIDDEN_CLASS, UI_ID, VIEWED_HIGHLIGHT_CLASS, APPLIED_HIGHLIGHT_CLASS } = DOM_IDS;
+    const {
+      HIDDEN_CLASS,
+      UI_ID,
+      VIEWED_HIGHLIGHT_CLASS,
+      APPLIED_HIGHLIGHT_CLASS,
+      ACTIVE_HIGHLIGHT_CLASS,
+    } = DOM_IDS;
     const { UI_Z_INDEX, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
     const viewedBackground = this.withAlpha(settings.colors.viewed, settings.opacity);
     const appliedBackground = this.withAlpha(settings.colors.applied, settings.opacity);
+    const activeBackground = this.withAlpha(settings.colors.active, settings.opacity);
 
     return /* css */ `
       .${HIDDEN_CLASS} {
@@ -494,6 +501,20 @@ export class StyleManager {
         background-color: ${appliedBackground} !important;
       }
 
+      .${ACTIVE_HIGHLIGHT_CLASS} {
+        box-shadow: inset 0 0 0 999px ${activeBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${activeBackground} !important;
+      }
+
+      .${ACTIVE_HIGHLIGHT_CLASS} .job-card-container,
+      .${ACTIVE_HIGHLIGHT_CLASS}[class*="job-card"],
+      .${ACTIVE_HIGHLIGHT_CLASS} > div {
+        box-shadow: inset 0 0 0 999px ${activeBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${activeBackground} !important;
+      }
+
       html.lhvj-pagination-cooldown div.jobs-search-pagination button,
       html.lhvj-pagination-cooldown div.jobs-search-pagination [role="button"] {
         pointer-events: none !important;
@@ -505,6 +526,10 @@ export class StyleManager {
         #${UI_ID} {
           top: 70px;
           right: 8px;
+        }
+
+        #${UI_ID} .lhvj-color-grid {
+          grid-template-columns: minmax(0, 1fr);
         }
       }
     `;

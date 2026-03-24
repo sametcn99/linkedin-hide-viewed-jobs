@@ -67,6 +67,10 @@ export class StorageService {
         DOM_IDS.APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY,
         CONFIG.APPLIED_HIGHLIGHT_COLOR
       ),
+      active: this.getHighlightColor(
+        DOM_IDS.ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY,
+        CONFIG.ACTIVE_HIGHLIGHT_COLOR
+      ),
     };
   }
 
@@ -84,12 +88,23 @@ export class StorageService {
     );
   }
 
+  setActiveHighlightColor(color: string): void {
+    this.setItem(
+      DOM_IDS.ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY,
+      this.normalizeHighlightColor(color, CONFIG.ACTIVE_HIGHLIGHT_COLOR)
+    );
+  }
+
   resetViewedHighlightColor(): void {
     this.setViewedHighlightColor(CONFIG.VIEWED_HIGHLIGHT_COLOR);
   }
 
   resetAppliedHighlightColor(): void {
     this.setAppliedHighlightColor(CONFIG.APPLIED_HIGHLIGHT_COLOR);
+  }
+
+  resetActiveHighlightColor(): void {
+    this.setActiveHighlightColor(CONFIG.ACTIVE_HIGHLIGHT_COLOR);
   }
 
   getHighlightOpacity(): number {

@@ -31,11 +31,12 @@ This project focuses on three things: stable LinkedIn SPA behavior, high-confide
 - **Two-Layer Detection**:
   - `Hide Mode`: Automatically vanishes viewed jobs.
   - `Highlight Mode`: Keeps jobs visible but adds separate low-opacity full-card color filters for `viewed` and `applied` cards.
+- **Active Card Accent**: On `jobs` and `jobs/search` views, the currently open job card gets its own configurable highlight filter color so the selected row stays easy to spot.
 - **Draggable Handle**: Reposition the badge anywhere on the screen.
-- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes, tune `viewed` and `applied` highlight colors, adjust filter opacity, and open the GitHub repository.
+- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes, tune `viewed`, `applied`, and `active` card colors, adjust filter opacity, and open the GitHub repository.
 - **Navigation Reload Toggle**: Choose whether SPA path changes should trigger a full page reload or stay on soft refresh.
 - **Live Counter**: Track `N viewed` or `N hidden` items in real-time.
-- **Persistence**: Remembers your preferences for `ON/OFF`, `Scroll Guard`, `Detection Mode`, `Navigation Reload`, `Highlight Colors`, `Filter Opacity`, and `Badge Position`.
+- **Persistence**: Remembers your preferences for `ON/OFF`, `Scroll Guard`, `Detection Mode`, `Navigation Reload`, `Viewed/Applied/Active Colors`, `Filter Opacity`, and `Badge Position`.
 - **Robust Navigation**: Full support for LinkedIn's SPA routing; automatically restarts scanning when you switch pages or collections.
 - **Multilingual**: Intelligent keyword detection across 15+ languages.
 
@@ -118,7 +119,8 @@ The script supports detection for the following languages:
 1. When `ON`, viewed jobs are hidden.
 1. In settings, `Reload OFF` is the default. SPA navigation stays on soft refresh unless you explicitly enable `Reload ON`.
 1. In `Highlight` mode, `Viewed` and `Applied` cards use different colors so you can distinguish them at a glance.
-1. In settings, use the native color pickers to adjust both highlight colors, and use the opacity slider to make the filter lighter or stronger.
+1. On `jobs` and `jobs/search` pages, the currently selected card also gets its own full highlight filter color.
+1. In settings, use the native color pickers to adjust `Viewed`, `Applied`, and `Active` card colors, and use the opacity slider to make the highlight filter lighter or stronger.
 1. The settings panel includes a direct `GitHub Repo` shortcut for the project source and issue tracker.
 1. If rapid downward scrolling is detected while most cards are viewed/hidden, the guard can enter a random cooldown (`5-15s`) and slow scroll steps to reduce LinkedIn rate-limit risk.
 1. If guard is triggered again while a cooldown is already active, the new cooldown is added on top of the remaining time (stacked), instead of restarting as separate back-to-back cooldowns.

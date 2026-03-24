@@ -2,8 +2,8 @@ import type {
   IHighlightSettings,
   IPosition,
   IUIState,
-  TDetectedJobState,
   TDetectionMode,
+  THighlightColorTarget,
 } from '../types';
 import { CONFIG, DOM_IDS } from '../constants';
 import { StorageService } from '../services/StorageService';
@@ -12,8 +12,8 @@ type ToggleCallback = (checked: boolean) => void;
 type ScrollGuardToggleCallback = (enabled: boolean) => void;
 type DetectionModeChangeCallback = (mode: TDetectionMode) => void;
 type ReloadNavigationToggleCallback = (enabled: boolean) => void;
-type HighlightColorChangeCallback = (state: TDetectedJobState, color: string) => void;
-type HighlightColorResetCallback = (state: TDetectedJobState) => void;
+type HighlightColorChangeCallback = (target: THighlightColorTarget, color: string) => void;
+type HighlightColorResetCallback = (target: THighlightColorTarget) => void;
 type HighlightOpacityChangeCallback = (value: number) => void;
 type HighlightOpacityResetCallback = () => void;
 
@@ -46,8 +46,10 @@ export class Badge {
     reloadNavBtn: null,
     viewedColorInput: null,
     appliedColorInput: null,
+    activeColorInput: null,
     viewedColorResetBtn: null,
     appliedColorResetBtn: null,
+    activeColorResetBtn: null,
     opacityInput: null,
     opacityValue: null,
     opacityResetBtn: null,
@@ -136,6 +138,7 @@ export class Badge {
       !this.state.reloadNavBtn ||
       !this.state.viewedColorInput ||
       !this.state.appliedColorInput ||
+      !this.state.activeColorInput ||
       !this.state.opacityInput ||
       !this.state.opacityValue
     ) {
@@ -169,6 +172,7 @@ export class Badge {
     );
     this.state.viewedColorInput.value = highlightSettings.colors.viewed;
     this.state.appliedColorInput.value = highlightSettings.colors.applied;
+    this.state.activeColorInput.value = highlightSettings.colors.active;
     this.state.opacityInput.value = String(highlightSettings.opacity);
     this.state.opacityValue.textContent = `${Math.round(highlightSettings.opacity * 100)}%`;
     this.state.reloadNavBtn.textContent = reloadOnNavigationEnabled ? 'Reload ON' : 'Reload OFF';
@@ -194,8 +198,10 @@ export class Badge {
     this.state.reloadNavBtn = null;
     this.state.viewedColorInput = null;
     this.state.appliedColorInput = null;
+    this.state.activeColorInput = null;
     this.state.viewedColorResetBtn = null;
     this.state.appliedColorResetBtn = null;
+    this.state.activeColorResetBtn = null;
     this.state.opacityInput = null;
     this.state.opacityValue = null;
     this.state.opacityResetBtn = null;
@@ -356,7 +362,7 @@ export class Badge {
 
     const colorLabel = document.createElement('span');
     colorLabel.className = 'lhvj-settings-label';
-    colorLabel.textContent = 'Highlight colors:';
+    colorLabel.textContent = 'Card colors:';
 
     const colorGrid = document.createElement('div');
     colorGrid.className = 'lhvj-color-grid';
@@ -371,9 +377,15 @@ export class Badge {
       highlightSettings.colors.applied,
       'applied'
     );
+    const activeColorControl = this.buildColorControl(
+      'Active',
+      highlightSettings.colors.active,
+      'active'
+    );
 
     colorGrid.appendChild(viewedColorControl);
     colorGrid.appendChild(appliedColorControl);
+    colorGrid.appendChild(activeColorControl);
 
     settingsPanel.appendChild(colorLabel);
     settingsPanel.appendChild(colorGrid);
@@ -468,8 +480,10 @@ export class Badge {
     this.state.reloadNavBtn = root.querySelector('.lhvj-reload-nav-btn');
     this.state.viewedColorInput = root.querySelector('.lhvj-viewed-color-input');
     this.state.appliedColorInput = root.querySelector('.lhvj-applied-color-input');
+    this.state.activeColorInput = root.querySelector('.lhvj-active-color-input');
     this.state.viewedColorResetBtn = root.querySelector('.lhvj-viewed-color-reset');
     this.state.appliedColorResetBtn = root.querySelector('.lhvj-applied-color-reset');
+    this.state.activeColorResetBtn = root.querySelector('.lhvj-active-color-reset');
     this.state.opacityInput = root.querySelector('.lhvj-opacity-input');
     this.state.opacityValue = root.querySelector('.lhvj-opacity-value');
     this.state.opacityResetBtn = root.querySelector('.lhvj-opacity-reset');
@@ -478,7 +492,7 @@ export class Badge {
   private buildColorControl(
     label: string,
     value: string,
-    state: TDetectedJobState
+    target: THighlightColorTarget
   ): HTMLDivElement {
     const control = document.createElement('div');
     control.className = 'lhvj-color-control';
@@ -492,21 +506,21 @@ export class Badge {
 
     const input = document.createElement('input');
     input.type = 'color';
-    input.className = `lhvj-color-input lhvj-${state}-color-input`;
+    input.className = `lhvj-color-input lhvj-${target}-color-input`;
     input.value = value;
     input.setAttribute('aria-label', `${label} highlight color`);
     input.addEventListener('input', () => {
-      this.onHighlightColorChange(state, input.value);
+      this.onHighlightColorChange(target, input.value);
     });
 
     const resetBtn = document.createElement('button');
     resetBtn.type = 'button';
-    resetBtn.className = `lhvj-reset-btn lhvj-${state}-color-reset`;
+    resetBtn.className = `lhvj-reset-btn lhvj-${target}-color-reset`;
     resetBtn.textContent = 'Reset';
     resetBtn.setAttribute('aria-label', `Reset ${label.toLowerCase()} highlight color`);
     resetBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      this.onHighlightColorReset(state);
+      this.onHighlightColorReset(target);
     });
 
     actions.appendChild(input);

@@ -1,9 +1,11 @@
 export type TDetectionMode = 'hide' | 'highlight';
 export type TDetectedJobState = 'viewed' | 'applied';
+export type THighlightColorTarget = TDetectedJobState | 'active';
 
 export interface IHighlightColors {
   viewed: string;
   applied: string;
+  active: string;
 }
 
 export interface IHighlightSettings {
@@ -35,6 +37,8 @@ export interface IConfig {
   readonly VIEWED_HIGHLIGHT_COLOR: string;
   /** Applied-card highlight color */
   readonly APPLIED_HIGHLIGHT_COLOR: string;
+  /** Active-card accent color */
+  readonly ACTIVE_HIGHLIGHT_COLOR: string;
   /** Default full-card highlight opacity */
   readonly HIGHLIGHT_OPACITY: number;
   /** Minimum allowed highlight opacity */
@@ -86,8 +90,10 @@ export interface IUIState {
   reloadNavBtn: HTMLButtonElement | null;
   viewedColorInput: HTMLInputElement | null;
   appliedColorInput: HTMLInputElement | null;
+  activeColorInput: HTMLInputElement | null;
   viewedColorResetBtn: HTMLButtonElement | null;
   appliedColorResetBtn: HTMLButtonElement | null;
+  activeColorResetBtn: HTMLButtonElement | null;
   opacityInput: HTMLInputElement | null;
   opacityValue: HTMLSpanElement | null;
   opacityResetBtn: HTMLButtonElement | null;
@@ -107,10 +113,12 @@ export interface IDomIdentifiers {
   readonly RELOAD_ON_NAVIGATION_STORAGE_KEY: string;
   readonly VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY: string;
   readonly APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY: string;
+  readonly ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY: string;
   readonly HIGHLIGHT_OPACITY_STORAGE_KEY: string;
   readonly UI_POSITION_KEY: string;
   readonly HIDDEN_CLASS: string;
   readonly UI_ID: string;
   readonly VIEWED_HIGHLIGHT_CLASS: string;
   readonly APPLIED_HIGHLIGHT_CLASS: string;
+  readonly ACTIVE_HIGHLIGHT_CLASS: string;
 }

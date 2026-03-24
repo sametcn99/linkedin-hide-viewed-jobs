@@ -160,6 +160,34 @@ export class DetectionService {
     }
   }
 
+  getActiveCards(cards: Iterable<HTMLElement>): Set<HTMLElement> {
+    const activeCards = new Set<HTMLElement>();
+    const activeJobId = this.getPageCurrentJobId();
+
+    if (!activeJobId) {
+      return activeCards;
+    }
+
+    for (const card of cards) {
+      if (this.cardContainsMatchingCurrentJobId(card, activeJobId)) {
+        activeCards.add(card);
+      }
+    }
+
+    return activeCards;
+  }
+
+  applyActiveHighlight(card: HTMLElement, isActive: boolean): void {
+    if (isActive) {
+      card.classList.add(DOM_IDS.ACTIVE_HIGHLIGHT_CLASS);
+      card.setAttribute('data-lhvj-active', '1');
+      return;
+    }
+
+    card.classList.remove(DOM_IDS.ACTIVE_HIGHLIGHT_CLASS);
+    card.removeAttribute('data-lhvj-active');
+  }
+
   isJobsPage(): boolean {
     return this.isJobsPath(location.pathname);
   }
@@ -340,6 +368,40 @@ export class DetectionService {
     } else {
       anchor.classList.remove(DOM_IDS.HIDDEN_CLASS);
       anchor.removeAttribute('data-lhvj-hidden-anchor');
+    }
+  }
+
+  private getPageCurrentJobId(): string | null {
+    const currentJobId = new URLSearchParams(location.search).get('currentJobId');
+    if (!currentJobId || !/^\d+$/.test(currentJobId)) {
+      return null;
+    }
+
+    return currentJobId;
+  }
+
+  private cardContainsMatchingCurrentJobId(card: HTMLElement, activeJobId: string): boolean {
+    const anchors = card.matches('a[href]')
+      ? [card as HTMLAnchorElement]
+      : Array.from(card.querySelectorAll<HTMLAnchorElement>('a[href]'));
+
+    for (let i = 0; i < anchors.length; i++) {
+      if (this.hrefMatchesCurrentJobId(anchors[i].href, activeJobId)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private hrefMatchesCurrentJobId(href: string | null, activeJobId: string): boolean {
+    if (!href) return false;
+
+    try {
+      const url = new URL(href, location.origin);
+      return url.searchParams.get('currentJobId') === activeJobId;
+    } catch {
+      return false;
     }
   }
 }
