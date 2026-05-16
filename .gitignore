@@ -2,3 +2,4 @@ node_modules/
 .sisyphus/
 dist/
 *.zip
+linkedin-hide-viewed-jobs.user.js
