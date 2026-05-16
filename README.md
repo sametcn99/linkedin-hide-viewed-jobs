@@ -93,8 +93,8 @@ This project focuses on three things: stable LinkedIn SPA behavior, high-confide
 
 Alternative:
 
-- Install directly from `@downloadURL`:
-- `https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main/linkedin-hide-viewed-jobs.user.js`
+- Install directly from the latest release:
+- [https://github.com/sametcn99/linkedin-hide-viewed-jobs/releases/latest/download/linkedin-hide-viewed-jobs.user.js](https://github.com/sametcn99/linkedin-hide-viewed-jobs/releases/latest/download/linkedin-hide-viewed-jobs.user.js)
 
 ### Installation of Browser Extension
 
