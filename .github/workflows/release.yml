@@ -45,6 +45,12 @@ jobs:
         id: version
         run: echo "tag=v$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: Configure Git
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Generate release notes
         id: notes
         if: ${{ github.event.inputs.dry_run != 'true' }}
