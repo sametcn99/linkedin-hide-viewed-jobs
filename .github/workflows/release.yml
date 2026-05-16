@@ -52,30 +52,27 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Generate release notes
-        id: notes
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           PREV_TAG=$(git tag --sort=-v:refname | head -1)
-          RANGE="${PREV_TAG:+$PREV_TAG..HEAD}"
-          NOTES="## ${{ steps.version.outputs.tag }}
-
-          ### What's Changed
-
-          "
-          while IFS= read -r line; do
-            NOTES+="- $line
-          "
-          done < <(git log --pretty=format:"%s" "$RANGE")
-          NOTES+="
-          ### Downloads
-
-          - **Userscript**: \`linkedin-hide-viewed-jobs.user.js\`
-          - **Chrome Extension**: \`linkedin-hide-viewed-jobs-chrome.zip\`
-          - **Firefox Extension**: \`linkedin-hide-viewed-jobs-firefox.zip\`
-          "
-          echo "notes<<EOF
-          $NOTES
-          EOF" >> $GITHUB_OUTPUT
+          if [ -z "$PREV_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="$PREV_TAG..HEAD"
+          fi
+          
+          echo "## ${{ steps.version.outputs.tag }}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "### What's Changed" >> release-notes.md
+          echo "" >> release-notes.md
+          git log --pretty=format:"- %s" $RANGE >> release-notes.md
+          echo "" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### Downloads" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "- **Userscript**: \`linkedin-hide-viewed-jobs.user.js\`" >> release-notes.md
+          echo "- **Chrome Extension**: \`linkedin-hide-viewed-jobs-chrome.zip\`" >> release-notes.md
+          echo "- **Firefox Extension**: \`linkedin-hide-viewed-jobs-firefox.zip\`" >> release-notes.md
 
       - name: Create tag
         if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -91,7 +88,7 @@ jobs:
             linkedin-hide-viewed-jobs-chrome.zip \
             linkedin-hide-viewed-jobs-firefox.zip \
             --title "${{ steps.version.outputs.tag }}" \
-            --notes "${{ steps.notes.outputs.notes }}" \
+            --notes-file release-notes.md \
             --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ github.token }}
