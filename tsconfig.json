@@ -11,10 +11,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "types": ["bun", "chrome"]
   },
-  "include": ["src/**/*.ts", "vite.config.ts"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "vite.config.ts"]
 }

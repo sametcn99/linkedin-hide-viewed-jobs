@@ -914,10 +914,10 @@
     </style>
   </head>
   <body>
-    {% capture optimized_screenshot_attrs %}src="{{ site.baseurl }}/screenshot.png" alt="Screenshot of the badge and hidden jobs" width="357" height="435" loading="lazy" decoding="async"{% endcapture %}
+    {% capture optimized_screenshot_attrs %}src="{{ site.baseurl }}//screenshots/userscript.png" alt="Screenshot of the badge and hidden jobs" width="357" height="435" loading="lazy" decoding="async"{% endcapture %}
     {% assign rendered_content = content
-      | replace: 'src="https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master/screenshot.png" alt="Screenshot of the badge and hidden jobs"', optimized_screenshot_attrs
-      | replace: 'src="https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main/screenshot.png" alt="Screenshot of the badge and hidden jobs"', optimized_screenshot_attrs
+      | replace: 'src="https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master//screenshots/userscript.png" alt="Screenshot of the badge and hidden jobs"', optimized_screenshot_attrs
+      | replace: 'src="https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main//screenshots/userscript.png" alt="Screenshot of the badge and hidden jobs"', optimized_screenshot_attrs
     %}
     <div class="site-shell">
       <header class="site-header">
@@ -974,7 +974,7 @@
                 </div>
                 <div class="panel-figure">
                   <img
-                    src="{{ site.baseurl }}/screenshot.png"
+                    src="{{ site.baseurl }}//screenshots/userscript.png"
                     alt="Screenshot of the badge and hidden jobs"
                     width="357"
                     height="435"

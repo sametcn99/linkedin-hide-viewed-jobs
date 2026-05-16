@@ -1,6 +1,7 @@
 import { CONFIG, DOM_IDS } from '../constants';
-import { StorageService, KeywordMatcher, DetectionService, RouterService } from '../services';
+import { KeywordMatcher, DetectionService, RouterService } from '../services';
 import { StyleManager, Badge } from '../ui';
+import type { IStorageService } from '../storage';
 import type {
   IHighlightColors,
   IHighlightSettings,
@@ -9,6 +10,10 @@ import type {
   THighlightColorTarget,
 } from '../types';
 
+export interface AppOptions {
+  showBadge?: boolean;
+}
+
 /**
  * Main application orchestrator that wires all services together.
  */
@@ -16,12 +21,13 @@ export class App {
   private static readonly PAGINATION_COOLDOWN_CLASS = 'lhvj-pagination-cooldown';
   private static readonly COUNT_COOLDOWN_STEP = 20;
 
-  private readonly storage: StorageService;
+  private readonly storage: IStorageService;
   private readonly matcher: KeywordMatcher;
   private readonly detection: DetectionService;
   private readonly styleManager: StyleManager;
-  private readonly badge: Badge;
+  private readonly badge: Badge | null;
   private readonly router: RouterService;
+  private readonly showBadge: boolean;
 
   private showHidden: boolean;
   private scrollGuardEnabled: boolean;
@@ -43,8 +49,9 @@ export class App {
   private isAdjustingNativeScroll = false;
   private countGrowthSinceCooldown = 0;
 
-  constructor() {
-    this.storage = new StorageService();
+  constructor(storage: IStorageService, options?: AppOptions) {
+    this.storage = storage;
+    this.showBadge = options?.showBadge !== false;
     this.matcher = new KeywordMatcher();
     this.detection = new DetectionService(this.matcher);
     this.styleManager = new StyleManager();
@@ -55,48 +62,52 @@ export class App {
     this.highlightColors = this.storage.getHighlightColors();
     this.highlightOpacity = this.storage.getHighlightOpacity();
 
-    this.badge = new Badge(
-      this.storage,
-      (checked) => {
-        this.showHidden = checked;
-        this.storage.setShowHidden(checked);
-        if (!checked) {
-          this.resetScrollCooldown();
-          this.resetCountBasedCooldownProgress();
+    if (this.showBadge) {
+      this.badge = new Badge(
+        this.storage,
+        (checked) => {
+          this.showHidden = checked;
+          this.storage.setShowHidden(checked);
+          if (!checked) {
+            this.resetScrollCooldown();
+            this.resetCountBasedCooldownProgress();
+          }
+          this.scheduleRefresh();
+        },
+        (enabled) => {
+          this.scrollGuardEnabled = enabled;
+          this.storage.setScrollGuardEnabled(enabled);
+          if (!enabled) {
+            this.resetScrollCooldown();
+            this.resetCountBasedCooldownProgress();
+          }
+          this.scheduleRefresh();
+        },
+        (mode) => {
+          this.detectionMode = mode;
+          this.storage.setDetectionMode(mode);
+          this.scheduleRefresh();
+        },
+        (enabled) => {
+          this.reloadOnNavigationEnabled = enabled;
+          this.storage.setReloadOnNavigation(enabled);
+        },
+        (state, color) => {
+          this.updateHighlightColor(state, color);
+        },
+        (state) => {
+          this.resetHighlightColor(state);
+        },
+        (value) => {
+          this.updateHighlightOpacity(value);
+        },
+        () => {
+          this.resetHighlightOpacity();
         }
-        this.scheduleRefresh();
-      },
-      (enabled) => {
-        this.scrollGuardEnabled = enabled;
-        this.storage.setScrollGuardEnabled(enabled);
-        if (!enabled) {
-          this.resetScrollCooldown();
-          this.resetCountBasedCooldownProgress();
-        }
-        this.scheduleRefresh();
-      },
-      (mode) => {
-        this.detectionMode = mode;
-        this.storage.setDetectionMode(mode);
-        this.scheduleRefresh();
-      },
-      (enabled) => {
-        this.reloadOnNavigationEnabled = enabled;
-        this.storage.setReloadOnNavigation(enabled);
-      },
-      (state, color) => {
-        this.updateHighlightColor(state, color);
-      },
-      (state) => {
-        this.resetHighlightColor(state);
-      },
-      (value) => {
-        this.updateHighlightOpacity(value);
-      },
-      () => {
-        this.resetHighlightOpacity();
-      }
-    );
+      );
+    } else {
+      this.badge = null;
+    }
 
     this.router = new RouterService(
       () => this.scheduleRefresh(),
@@ -109,6 +120,45 @@ export class App {
     this.styleManager.inject(this.getHighlightSettings());
     this.startRuntime();
     this.router.startObserving();
+  }
+
+  /** Reload settings from storage — called when chrome.storage changes externally */
+  refreshSettings(): void {
+    const previousMode = this.detectionMode;
+    const previousScrollGuard = this.scrollGuardEnabled;
+    const previousShowHidden = this.showHidden;
+
+    this.showHidden = this.storage.getShowHidden();
+    this.scrollGuardEnabled = this.storage.getScrollGuardEnabled();
+    this.detectionMode = this.storage.getDetectionMode();
+    this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation();
+    this.highlightColors = this.storage.getHighlightColors();
+    this.highlightOpacity = this.storage.getHighlightOpacity();
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+
+    if (previousMode !== this.detectionMode) {
+      this.clearDetectedVisualState();
+    }
+
+    // Reset cooldowns if extension or scroll guard is turned OFF
+    if (
+      (previousShowHidden && !this.showHidden) ||
+      (previousScrollGuard && !this.scrollGuardEnabled)
+    ) {
+      this.resetScrollCooldown();
+      this.resetCountBasedCooldownProgress();
+    }
+
+    this.scheduleRefresh();
+  }
+
+  /** Get current stats — used by extension popup */
+  getStats(): { hiddenCount: number; isJobsPage: boolean; cooldownSecondsLeft: number } {
+    return {
+      hiddenCount: this.hiddenCount,
+      isJobsPage: this.detection.isJobsPage(),
+      cooldownSecondsLeft: this.getCooldownSecondsLeft(),
+    };
   }
 
   // ── Runtime lifecycle ────────────────────────────────────────────────
@@ -177,7 +227,7 @@ export class App {
       this.hiddenCount = 0;
       this.resetScrollCooldown();
       this.resetCountBasedCooldownProgress();
-      this.badge.remove();
+      this.badge?.remove();
       return;
     }
 
@@ -186,14 +236,14 @@ export class App {
       this.resetScrollCooldown();
       this.resetCountBasedCooldownProgress();
       this.clearDetectedVisualState();
-      this.badge.ensure(
+      this.badge?.ensure(
         this.showHidden,
         this.scrollGuardEnabled,
         this.detectionMode,
         this.reloadOnNavigationEnabled,
         this.getHighlightSettings()
       );
-      this.badge.updateCount(
+      this.badge?.updateCount(
         0,
         this.showHidden,
         this.scrollGuardEnabled,
@@ -278,14 +328,14 @@ export class App {
 
     this.maybeStartCountBasedCooldown(previousHiddenCount);
 
-    this.badge.ensure(
+    this.badge?.ensure(
       this.showHidden,
       this.scrollGuardEnabled,
       this.detectionMode,
       this.reloadOnNavigationEnabled,
       this.getHighlightSettings()
     );
-    this.badge.updateCount(
+    this.badge?.updateCount(
       this.hiddenCount,
       this.showHidden,
       this.scrollGuardEnabled,
@@ -367,7 +417,7 @@ export class App {
   }
 
   private onWindowResize = (): void => {
-    this.badge.syncPositionWithinViewport();
+    this.badge?.syncPositionWithinViewport();
   };
 
   private onWheel = (e: WheelEvent): void => {

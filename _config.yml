@@ -3,7 +3,7 @@ description: Privacy-first LinkedIn Jobs userscript that hides or highlights vie
 lang: en
 url: https://sametcn99.github.io
 baseurl: /linkedin-hide-viewed-jobs
-image: /linkedin-hide-viewed-jobs/screenshot.png
+image: /linkedin-hide-viewed-jobs//screenshots/userscript.png
 logo: /linkedin-hide-viewed-jobs/icons/android-chrome-512x512.png
 author: sametcn99
 repository_url: https://github.com/sametcn99/linkedin-hide-viewed-jobs

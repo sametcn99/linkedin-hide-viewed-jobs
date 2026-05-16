@@ -5,8 +5,8 @@ import type {
   TDetectionMode,
   THighlightColorTarget,
 } from '../types';
+import type { IStorageService } from '../storage';
 import { CONFIG, DOM_IDS } from '../constants';
-import { StorageService } from '../services/StorageService';
 
 type ToggleCallback = (checked: boolean) => void;
 type ScrollGuardToggleCallback = (enabled: boolean) => void;
@@ -23,7 +23,7 @@ type HighlightOpacityResetCallback = () => void;
 export class Badge {
   private static readonly REPOSITORY_URL = 'https://github.com/sametcn99/linkedin-hide-viewed-jobs';
 
-  private readonly storage: StorageService;
+  private readonly storage: IStorageService;
   private readonly onToggle: ToggleCallback;
   private readonly onScrollGuardToggle: ScrollGuardToggleCallback;
   private readonly onDetectionModeChange: DetectionModeChangeCallback;
@@ -57,7 +57,7 @@ export class Badge {
   private isDragging = false;
 
   constructor(
-    storage: StorageService,
+    storage: IStorageService,
     onToggle: ToggleCallback,
     onScrollGuardToggle: ScrollGuardToggleCallback,
     onDetectionModeChange: DetectionModeChangeCallback,

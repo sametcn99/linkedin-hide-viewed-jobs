@@ -1,19 +1,40 @@
 # LinkedIn Hide Viewed Jobs
 
-Hide or highlight viewed job postings on LinkedIn Jobs with a privacy-first userscript built for Tampermonkey and Violentmonkey.
+Hide or highlight viewed job postings on LinkedIn Jobs with a privacy-first userscript built for Tampermonkey and Violentmonkey — **or install as a standalone browser extension for Chrome and Firefox**.
 
 This project focuses on three things: stable LinkedIn SPA behavior, high-confidence multilingual viewed/applied detection, and safer scrolling with guard and cooldown protections.
 
 ## Quick Links
 
-- [Install userscript](#installation)
+- [Screenshot](#screenshot)
+- [Project Links](#project-links)
+- [Features](#features)
+- [Supported Pages](#supported-pages)
+- [Browser Compatibility](#browser-compatibility)
+  - [Userscript](#userscript)
+  - [Browser Extension](#browser-extension)
+- [Installation](#installation)
+  - [Installation of Userscript](#installation-of-userscript)
+  - [Installation of Browser Extension](#installation-of-browser-extension)
 - [GitHub Pages](#github-pages)
-- [Supported languages](#supported-languages)
-- [Project links](#project-links)
+- [Supported Languages](#supported-languages)
+- [Usage](#usage)
+- [Detection Logic](#detection-logic)
+- [Customization](#customization)
+- [Architecture](#architecture)
+  - [Userscript Mode](#userscript-mode)
+  - [Extension Mode](#extension-mode)
+  - [Shared Code](#shared-code)
+  - [Build Commands](#build-commands)
+- [Limitations](#limitations)
+- [Privacy](#privacy)
+- [Contributing](#contributing)
+- [Releasing](#releasing)
 
 ## Screenshot
 
-![Screenshot of the badge and hidden jobs](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master/screenshot.png)
+![Screenshot of the userscript badge](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master//screenshots/userscript.png)
+![Screenshot of the extension popup](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master//screenshots/extension.png)
 
 ## Project Links
 
@@ -48,11 +69,20 @@ This project focuses on three things: stable LinkedIn SPA behavior, high-confide
 
 ## Browser Compatibility
 
+### Userscript
+
 - Chrome + Violentmonkey/Tampermonkey
 - Edge + Violentmonkey/Tampermonkey
 - Firefox + Violentmonkey/Tampermonkey
 
+### Browser Extension
+
+- Chrome 88+ (Manifest V3)
+- Firefox 109+ (Manifest V3)
+
 ## Installation
+
+### Installation of Userscript
 
 1. Install a userscript extension in your browser:
 1. Chrome/Edge: Tampermonkey or Violentmonkey
@@ -65,6 +95,30 @@ Alternative:
 
 - Install directly from `@downloadURL`:
 - `https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/main/linkedin-hide-viewed-jobs.user.js`
+
+### Installation of Browser Extension
+
+The browser extension provides the same functionality as the userscript in a standalone package — no Tampermonkey/Violentmonkey needed.
+
+**Chrome:**
+
+1. Download `linkedin-hide-viewed-jobs-chrome.zip` from the [latest release](https://github.com/sametcn99/linkedin-hide-viewed-jobs/releases).
+1. Unzip the file to a permanent folder on your computer.
+1. Open `chrome://extensions` in Chrome.
+1. Enable **Developer mode** (toggle in the top-right corner).
+1. Click **Load unpacked** and select the unzipped folder.
+1. Navigate to any LinkedIn Jobs page.
+
+**Firefox:**
+
+1. Download `linkedin-hide-viewed-jobs-firefox.zip` from the [latest release](https://github.com/sametcn99/linkedin-hide-viewed-jobs/releases).
+1. Unzip the file to a permanent folder on your computer.
+1. Open `about:debugging` in Firefox.
+1. Click **This Firefox** → **Load Temporary Add-on**.
+1. Select the `manifest.json` file from the unzipped folder.
+1. Navigate to any LinkedIn Jobs page.
+
+> **Note:** Firefox temporary add-ons are removed when the browser closes. For persistent installation, the extension needs to be signed by Mozilla.
 
 ## GitHub Pages
 
@@ -152,6 +206,58 @@ Common knobs:
 - `UI_POSITION_KEY`: Badge position storage key
 - `HIDDEN_CLASS`: CSS class used for hiding
 
+## Architecture
+
+### Userscript Mode
+
+```text
+main.ts → LocalStorageService → App → Badge / DetectionService / RouterService / StyleManager
+```
+
+- Entry: `src/main.ts`
+- Storage: `window.localStorage` via `LocalStorageService`
+- UI: In-page draggable badge
+
+### Extension Mode
+
+```text
+content.ts → ChromeStorageService → App → Badge / DetectionService / RouterService / StyleManager
+popup.ts ← chrome.storage.local → background.ts → chrome.storage.onChanged → content.ts
+```
+
+- Entry (content): `src/extension/content.ts` — injected into LinkedIn pages
+- Entry (background): `src/extension/background.ts` — service worker relaying storage changes
+- Popup: `src/popup/popup.html` + `popup.ts` + `popup.css` — settings UI in browser toolbar
+- Storage: `chrome.storage.local` via `ChromeStorageService`
+- Sync: Popup changes → `chrome.storage.local` → background relays → content script calls `app.refreshSettings()`
+
+### Shared Code
+
+Both modes share the same core business logic:
+
+- `src/core/App.ts` — orchestrator (accepts `IStorageService` via dependency injection)
+- `src/services/DetectionService.ts` — viewed/applied detection
+- `src/services/KeywordMatcher.ts` — multilingual keyword matching
+- `src/services/RouterService.ts` — SPA route change detection
+- `src/ui/Badge.ts` — in-page badge UI
+- `src/ui/StyleManager.ts` — CSS injection
+
+The storage adapter pattern (`IStorageService`) means `App` works identically whether backed by `localStorage` or `chrome.storage.local`.
+
+### Build Commands
+
+```bash
+bun run build              # Build userscript only (.user.js)
+bun run build:extension    # Build browser extension only (dist/extension/)
+bun run build:all          # Build both
+bun run package:chrome     # Create Chrome zip
+bun run package:firefox    # Create Firefox zip
+bun run package:all        # Create both zips
+bun run lint               # Check code quality
+bun run check              # Lint + format
+bun run release             # Create GitHub release (local)
+```
+
 ## Limitations
 
 - If LinkedIn changes its DOM structure, selectors may need updates.
@@ -170,7 +276,9 @@ Contributions are welcome.
 1. Fork the repository.
 1. Create a feature branch (`feature/your-change`) or fix branch (`fix/your-change`).
 1. Make source changes under `src/**` and update `README.md` if behavior changes.
-1. Test on LinkedIn Jobs pages to verify detection, badge UI, and toggle behavior.
+1. Run `bun run check` to verify lint and formatting.
+1. Run `bun run build:all` to verify both userscript and extension build.
+1. Test on LinkedIn Jobs pages to verify detection, badge UI, toggle behavior, and extension popup.
 1. Open a pull request with a clear summary, before/after notes, and screenshots when UI is affected.
 
 Guidelines:
@@ -178,4 +286,23 @@ Guidelines:
 - Keep changes focused and minimal.
 - Avoid unrelated refactors in the same pull request.
 - Preserve compatibility with Tampermonkey/Violentmonkey on Chrome, Edge, and Firefox.
+- Preserve compatibility with the standalone browser extension (Manifest V3).
 - If you add new language keywords, include only high-confidence terms to reduce false positives.
+- If you change storage keys or settings, ensure both `LocalStorageService` and `ChromeStorageService` are updated.
+
+## Releasing
+
+Releases are created manually via GitHub Actions:
+
+1. Update `version` in `package.json`.
+1. Commit all changes.
+1. Go to **Actions → Release → Run workflow**.
+1. The workflow builds both the userscript and extension, packages ZIP files, generates release notes from conventional commits, and creates a GitHub Release with all artifacts attached.
+
+For local testing:
+
+```bash
+bun run build:all
+bun run package:all
+# Then sideload from dist/extension/
+```

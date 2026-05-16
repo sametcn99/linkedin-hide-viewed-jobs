@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Hide Viewed Jobs</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>LinkedIn Hide Viewed Jobs</h1>
+    </header>
+
+    <section class="popup-section counter-section">
+      <div class="counter-row">
+        <span class="counter-label">Hidden Jobs</span>
+        <span id="hidden-count" class="counter-value">-</span>
+      </div>
+      <div id="cooldown-row" class="cooldown-row" style="display: none;">
+        <span class="cooldown-label">Scroll Guard Cooldown</span>
+        <span id="cooldown-value" class="cooldown-value">0s</span>
+      </div>
+      <p id="not-on-jobs-page" class="not-on-jobs-page" style="display: none;">
+        Open a LinkedIn Jobs page to see stats
+      </p>
+    </section>
+
+    <section class="popup-section">
+      <label class="toggle-row">
+        <span class="toggle-label">ON/OFF</span>
+        <button id="toggle-show-hidden" class="toggle-switch" aria-label="Toggle extension on or off" role="switch" aria-checked="true">
+          <span class="toggle-thumb"></span>
+        </button>
+      </label>
+
+      <label class="toggle-row">
+        <span class="toggle-label">Scroll Guard</span>
+        <button id="toggle-scroll-guard" class="toggle-switch" aria-label="Toggle scroll guard" role="switch" aria-checked="true">
+          <span class="toggle-thumb"></span>
+        </button>
+      </label>
+
+      <label class="toggle-row">
+        <span class="toggle-label">Reload on Navigation</span>
+        <button id="toggle-reload-navigation" class="toggle-switch" aria-label="Toggle reload on navigation" role="switch" aria-checked="false">
+          <span class="toggle-thumb"></span>
+        </button>
+      </label>
+    </section>
+
+    <section class="popup-section">
+      <h2 class="section-title">Detection Mode</h2>
+      <div class="radio-group">
+        <label class="radio-row">
+          <input type="radio" name="detection-mode" value="hide" id="mode-hide" />
+          <span class="radio-label">Hide</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="detection-mode" value="highlight" id="mode-highlight" />
+          <span class="radio-label">Highlight</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="popup-section" id="highlight-settings">
+      <h2 class="section-title">Highlight Settings</h2>
+
+      <div class="color-row">
+        <label class="color-label" for="color-viewed">Viewed Color</label>
+        <div class="color-input-group">
+          <input type="color" id="color-viewed" class="color-input" />
+          <button class="reset-btn" data-target="viewed" aria-label="Reset viewed color">↺</button>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <label class="color-label" for="color-applied">Applied Color</label>
+        <div class="color-input-group">
+          <input type="color" id="color-applied" class="color-input" />
+          <button class="reset-btn" data-target="applied" aria-label="Reset applied color">↺</button>
+        </div>
+      </div>
+
+      <div class="color-row">
+        <label class="color-label" for="color-active">Active Color</label>
+        <div class="color-input-group">
+          <input type="color" id="color-active" class="color-input" />
+          <button class="reset-btn" data-target="active" aria-label="Reset active color">↺</button>
+        </div>
+      </div>
+
+      <div class="opacity-row">
+        <label class="opacity-label" for="opacity-slider">Opacity</label>
+        <div class="slider-group">
+          <input type="range" id="opacity-slider" class="slider" min="0.04" max="0.28" step="0.01" />
+          <span id="opacity-value" class="opacity-value">0.10</span>
+          <button class="reset-btn" data-target="opacity" aria-label="Reset opacity">↺</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="popup-footer">
+      <a href="https://github.com/sametcn99/linkedin-hide-viewed-jobs" target="_blank" rel="noopener noreferrer" class="footer-link">
+        GitHub
+      </a>
+      <span class="footer-version" id="version-display">v1.1.5</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
