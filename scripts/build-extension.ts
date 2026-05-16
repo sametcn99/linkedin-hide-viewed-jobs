@@ -44,12 +44,17 @@ async function main() {
   console.log('Building popup (ES module)...');
   await buildEntry('src/popup/popup.ts', 'popup', 'es');
 
-console.log('Copying extension files...');
-  await Bun.write(`${DIST}/manifest.json`, Bun.file(`${ROOT}/extension/manifest.json`));
+  console.log('Copying extension files...');
+  const packageJson = await Bun.file(`${ROOT}/package.json`).json();
+  const currentVersion = packageJson.version as string;
 
-  const pkg = await Bun.file(`${ROOT}/package.json`).json();
-  const popupHtml = await Bun.file(`${ROOT}/src/popup/popup.html`).text();
-  await Bun.write(`${DIST}/popup.html`, popupHtml.replace('v1.1.5', `v${pkg.version}`));
+  const manifestData = await Bun.file(`${ROOT}/extension/manifest.json`).json();
+  manifestData.version = currentVersion;
+  await Bun.write(`${DIST}/manifest.json`, JSON.stringify(manifestData, null, 2));
+
+  const popupHtmlContent = await Bun.file(`${ROOT}/src/popup/popup.html`).text();
+  const updatedPopupHtml = popupHtmlContent.replace(/v\d+\.\d+\.\d+/, `v${currentVersion}`);
+  await Bun.write(`${DIST}/popup.html`, updatedPopupHtml);
 
   await Bun.write(`${DIST}/popup.css`, Bun.file(`${ROOT}/src/popup/popup.css`));
 
