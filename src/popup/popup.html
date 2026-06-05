@@ -10,11 +10,19 @@
   <div class="popup-container">
     <header class="popup-header">
       <h1>LinkedIn Hide Viewed Jobs</h1>
+      <button id="open-as-window-btn" class="open-window-btn" aria-label="Open in new window" title="Open as browser window">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+      </button>
     </header>
 
+    <div class="popup-content">
     <section class="popup-section counter-section">
       <div class="counter-row">
-        <span class="counter-label">Hidden Jobs</span>
+        <span class="counter-label">Detected Jobs</span>
         <span id="hidden-count" class="counter-value">-</span>
       </div>
       <div id="cooldown-row" class="cooldown-row" style="display: none;">
@@ -66,29 +74,29 @@
     <section class="popup-section" id="highlight-settings">
       <h2 class="section-title">Highlight Settings</h2>
 
-      <div class="color-row">
-        <label class="color-label" for="color-viewed">Viewed Color</label>
+      <label class="color-row">
+        <span class="color-label">Viewed Color</span>
         <div class="color-input-group">
           <input type="color" id="color-viewed" class="color-input" />
           <button class="reset-btn" data-target="viewed" aria-label="Reset viewed color">↺</button>
         </div>
-      </div>
+      </label>
 
-      <div class="color-row">
-        <label class="color-label" for="color-applied">Applied Color</label>
+      <label class="color-row">
+        <span class="color-label">Applied Color</span>
         <div class="color-input-group">
           <input type="color" id="color-applied" class="color-input" />
           <button class="reset-btn" data-target="applied" aria-label="Reset applied color">↺</button>
         </div>
-      </div>
+      </label>
 
-      <div class="color-row">
-        <label class="color-label" for="color-active">Active Color</label>
+      <label class="color-row">
+        <span class="color-label">Active Color</span>
         <div class="color-input-group">
           <input type="color" id="color-active" class="color-input" />
           <button class="reset-btn" data-target="active" aria-label="Reset active color">↺</button>
         </div>
-      </div>
+      </label>
 
       <div class="opacity-row">
         <label class="opacity-label" for="opacity-slider">Opacity</label>
@@ -99,6 +107,7 @@
         </div>
       </div>
     </section>
+    </div>
 
     <footer class="popup-footer">
       <a href="https://github.com/sametcn99/linkedin-hide-viewed-jobs" target="_blank" rel="noopener noreferrer" class="footer-link">

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Hide Viewed Jobs",
   "description": "Hides viewed job cards on LinkedIn Jobs pages, adds a compact badge, and lets you reveal hidden items anytime.",
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "tabs", "windows"],
   "host_permissions": ["https://www.linkedin.com/*"],
   "content_scripts": [
     {

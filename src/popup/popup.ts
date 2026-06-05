@@ -26,8 +26,9 @@ async function fetchStats(hiddenCountEl: HTMLElement, notOnJobsPageEl: HTMLEleme
   const cooldownValue = $<HTMLElement>('cooldown-value');
 
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id || !tab.url?.includes('linkedin.com/jobs')) {
+    const tabs = await chrome.tabs.query({ url: 'https://www.linkedin.com/jobs/*' });
+    const tab = tabs.find((t) => t.id !== undefined);
+    if (!tab?.id) {
       hiddenCountEl.textContent = '-';
       notOnJobsPageEl.style.display = 'block';
       if (cooldownRow) cooldownRow.style.display = 'none';
@@ -77,6 +78,45 @@ function initPopup(): void {
   const resetBtns = document.querySelectorAll<HTMLButtonElement>('.reset-btn');
   const hiddenCountEl = $<HTMLElement>('hidden-count');
   const notOnJobsPageEl = $<HTMLElement>('not-on-jobs-page');
+  const openAsWindowBtn = $<HTMLButtonElement>('open-as-window-btn');
+
+  const isWindowMode = window.location.href.includes('_popup=true');
+
+  if (isWindowMode) {
+    document.documentElement.classList.add('window-mode');
+    document.body.classList.add('window-mode');
+  }
+
+  if (openAsWindowBtn) {
+    if (isWindowMode) {
+      openAsWindowBtn.classList.add('hidden');
+    } else {
+      openAsWindowBtn.addEventListener('click', async () => {
+        const currentUrl = chrome.runtime.getURL('popup.html');
+        const windowUrl = currentUrl + '?_popup=true';
+        try {
+          await chrome.windows.create({
+            url: windowUrl,
+            type: 'popup',
+            width: 320,
+            height: Math.min(screen.height - 100, 600),
+            top: 100,
+            left: screen.width - 340,
+          });
+          window.close();
+        } catch {
+          await chrome.windows.create({
+            url: windowUrl,
+            type: 'popup',
+            width: 320,
+            height: Math.min(screen.height - 100, 600),
+            top: 100,
+            left: screen.width - 340,
+          });
+        }
+      });
+    }
+  }
 
   if (
     !toggleShowHidden ||
