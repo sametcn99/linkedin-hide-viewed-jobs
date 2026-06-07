@@ -251,7 +251,7 @@ The storage adapter pattern (`IStorageService`) means `App` works identically wh
 
 ```bash
 bun run build              # Build userscript only (.user.js)
-bun run build:extension    # Build browser extension only (dist/extension/)
+bun run build:extension    # Build browser extension (dist/extension-chrome/ and dist/extension-firefox/)
 bun run build:all          # Build both
 bun run package:chrome     # Create Chrome zip
 bun run package:firefox    # Create Firefox zip
@@ -307,5 +307,5 @@ For local testing:
 ```bash
 bun run build:all
 bun run package:all
-# Then sideload from dist/extension/
+# Then sideload from dist/extension-chrome/ or dist/extension-firefox/
 ```

@@ -225,6 +225,7 @@ body.window-mode .popup-content {
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
+  -moz-appearance: none;
   outline: none;
   transition: background 0.15s ease, border-color 0.15s ease;
   flex-shrink: 0;
@@ -351,6 +352,11 @@ body.window-mode .popup-content {
   border-radius: 2px;
 }
 
+.color-input::-moz-color-swatch {
+  border: none;
+  border-radius: 2px;
+}
+
 /* Opacity slider */
 
 .opacity-row {
@@ -390,6 +396,7 @@ body.window-mode .popup-content {
   height: 4px;
   appearance: none;
   -webkit-appearance: none;
+  -moz-appearance: none;
   background: var(--lhvj-chip-border);
   border-radius: 2px;
   outline: none;
@@ -403,6 +410,15 @@ body.window-mode .popup-content {
   border-radius: 50%;
   background: var(--lhvj-accent);
   cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--lhvj-accent);
+  cursor: pointer;
+  border: none;
 }
 
 .slider:focus-visible {
