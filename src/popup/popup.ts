@@ -270,7 +270,7 @@ function initPopup(): void {
     keywordChipInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        const value = keywordChipInput.value.trim().toLocaleLowerCase('tr-TR');
+        const value = keywordChipInput.value.trim().toLowerCase();
         if (!value) return;
         chrome.storage.local.get(
           STORAGE_KEYS.CUSTOM_KEYWORDS,

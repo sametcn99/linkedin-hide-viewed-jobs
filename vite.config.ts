@@ -1,5 +1,9 @@
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'));
 
 export default defineConfig({
   plugins: [
@@ -21,7 +25,7 @@ export default defineConfig({
           ar: 'لينكدإن إخفاء الوظائف التي تمت مشاهدتها',
         },
         namespace: 'https://github.com/sametcn99',
-        version: '1.1.5',
+        version: pkg.version,
         description: {
           '': 'Hides viewed job cards on LinkedIn Jobs pages, adds a compact draggable badge, and lets you reveal hidden items anytime.',
           tr: 'LinkedIn is sayfalarinda goruntulenen ilan kartlarini gizler, suruklenebilir kompakt bir badge ekler ve gizlenenleri istedigin zaman geri gostermenizi saglar.',

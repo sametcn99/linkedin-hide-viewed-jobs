@@ -172,8 +172,8 @@ async function buildForBrowser(browser: BrowserTarget): Promise<void> {
   console.log(`  Building background script (IIFE)...`);
   await buildEntry('src/extension/background.ts', 'background', distDir, 'iife');
 
-  console.log(`  Building popup (ES module)...`);
-  await buildEntry('src/popup/popup.ts', 'popup', distDir, 'es');
+  console.log(`  Building popup (IIFE)...`);
+  await buildEntry('src/popup/popup.ts', 'popup', distDir, 'iife');
 
   console.log(`  Copying static files...`);
   copyStaticFiles(distDir);
@@ -189,6 +189,12 @@ async function buildForBrowser(browser: BrowserTarget): Promise<void> {
 async function main() {
   const packageJson = JSON.parse(readFileSync(`${ROOT}/package.json`, 'utf8'));
   const version = packageJson.version as string;
+
+  const staleDist = `${ROOT}/dist/extension`;
+  if (existsSync(staleDist)) {
+    console.log('Cleaning stale dist/extension/ directory...');
+    deleteRecursive(staleDist);
+  }
 
   console.log(`LinkedIn Hide Viewed Jobs v${version} — Extension Build`);
   console.log('='.repeat(50));

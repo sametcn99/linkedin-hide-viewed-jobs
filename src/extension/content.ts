@@ -15,21 +15,32 @@ storage.ready().then(() => {
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local') return;
 
-    const changedKeys = Object.keys(changes);
-    const hasRelevantChange = changedKeys.some(
-      (key) => key.startsWith('lhvj-') && changes[key]?.newValue !== changes[key]?.oldValue
-    );
+    const lhvjChanges: Record<string, { newValue?: string; oldValue?: string }> = {};
+    let hasRelevantChange = false;
+
+    for (const [key, change] of Object.entries(changes)) {
+      if (!key.startsWith('lhvj-') || typeof change?.newValue === 'undefined') continue;
+      if (change.newValue !== change.oldValue) hasRelevantChange = true;
+      if (typeof change.newValue === 'string') {
+        lhvjChanges[key] = {
+          newValue: change.newValue,
+          oldValue: change.oldValue as string | undefined,
+        };
+      } else {
+        lhvjChanges[key] = { newValue: undefined, oldValue: change.oldValue as string | undefined };
+      }
+    }
 
     if (!hasRelevantChange) return;
 
-    storage.updateCacheFromChanges(changes);
+    storage.updateCacheFromChanges(lhvjChanges);
     app.refreshSettings();
   });
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'get-stats') {
       sendResponse(app.getStats());
+      return true;
     }
-    return true;
   });
 });

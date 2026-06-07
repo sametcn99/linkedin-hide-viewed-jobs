@@ -25,7 +25,7 @@ export class ChromeStorageService implements IStorageService {
     try {
       const result = await chrome.storage.local.get(null);
       for (const [key, value] of Object.entries(result)) {
-        if (typeof value === 'string') {
+        if (key.startsWith('lhvj-') && typeof value === 'string') {
           this.cache.set(key, value);
         }
       }
