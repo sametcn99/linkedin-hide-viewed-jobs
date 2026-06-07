@@ -28,7 +28,9 @@ async function fetchStats(hiddenCountEl: HTMLElement, notOnJobsPageEl: HTMLEleme
   const cooldownValue = $<HTMLElement>('cooldown-value');
 
   try {
-    const tabs = await chrome.tabs.query({ url: 'https://www.linkedin.com/jobs/*' });
+    const tabs = await chrome.tabs.query({
+      url: ['https://www.linkedin.com/jobs', 'https://www.linkedin.com/jobs/*'],
+    });
     const tab = tabs.find((t) => t.id !== undefined);
     if (!tab?.id) {
       hiddenCountEl.textContent = '-';
@@ -66,6 +68,16 @@ async function fetchStats(hiddenCountEl: HTMLElement, notOnJobsPageEl: HTMLEleme
 }
 
 function initPopup(): void {
+  const versionEl = $<HTMLElement>('version-display');
+  if (versionEl) {
+    try {
+      const manifest = chrome.runtime.getManifest();
+      versionEl.textContent = `v${manifest.version}`;
+    } catch {
+      versionEl.textContent = '';
+    }
+  }
+
   const toggleShowHidden = $<HTMLButtonElement>('toggle-show-hidden');
   const toggleScrollGuard = $<HTMLButtonElement>('toggle-scroll-guard');
   const toggleReloadNav = $<HTMLButtonElement>('toggle-reload-navigation');

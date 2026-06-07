@@ -148,10 +148,8 @@ function copyStaticFiles(distDir: string) {
   }
 }
 
-function copyPopupFiles(distDir: string, version: string) {
-  const popupHtmlContent = readFileSync(`${ROOT}/src/popup/popup.html`, 'utf8');
-  const updatedPopupHtml = popupHtmlContent.replace(/v\d+\.\d+\.\d+/, `v${version}`);
-  writeFileSync(`${distDir}/popup.html`, updatedPopupHtml);
+function copyPopupFiles(distDir: string) {
+  writeFileSync(`${distDir}/popup.html`, readFileSync(`${ROOT}/src/popup/popup.html`, 'utf8'));
   writeFileSync(`${distDir}/popup.css`, readFileSync(`${ROOT}/src/popup/popup.css`, 'utf8'));
 }
 
@@ -177,7 +175,7 @@ async function buildForBrowser(browser: BrowserTarget): Promise<void> {
 
   console.log(`  Copying static files...`);
   copyStaticFiles(distDir);
-  copyPopupFiles(distDir, version);
+  copyPopupFiles(distDir);
 
   const manifest =
     browser === 'chrome' ? getChromeManifest(version) : getFirefoxManifest(version);

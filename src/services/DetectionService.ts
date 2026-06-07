@@ -368,17 +368,14 @@ export class DetectionService {
   ): TDetectedJobState | null {
     const nodes = card.querySelectorAll<HTMLElement>(selector);
     const limit = Math.min(nodes.length, maxNodes);
+    let viewedFound = false;
     for (let i = 0; i < limit; i++) {
       if (!this.isElementVisible(nodes[i])) continue;
       const state = this.matcher.getDetectedStateFromElement(nodes[i]);
-      if (state === 'applied') {
-        return state;
-      }
-      if (state === 'viewed') {
-        return state;
-      }
+      if (state === 'applied') return 'applied';
+      if (state === 'viewed') viewedFound = true;
     }
-    return null;
+    return viewedFound ? 'viewed' : null;
   }
 
   private setDetectedState(
