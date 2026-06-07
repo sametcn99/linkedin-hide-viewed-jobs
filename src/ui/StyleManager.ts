@@ -38,11 +38,13 @@ export class StyleManager {
       VIEWED_HIGHLIGHT_CLASS,
       APPLIED_HIGHLIGHT_CLASS,
       ACTIVE_HIGHLIGHT_CLASS,
+      KEYWORD_HIGHLIGHT_CLASS,
     } = DOM_IDS;
     const { UI_Z_INDEX, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
     const viewedBackground = this.withAlpha(settings.colors.viewed, settings.opacity);
     const appliedBackground = this.withAlpha(settings.colors.applied, settings.opacity);
     const activeBackground = this.withAlpha(settings.colors.active, settings.opacity);
+    const keywordBackground = this.withAlpha(settings.colors.keyword, settings.opacity);
 
     return /* css */ `
       .${HIDDEN_CLASS} {
@@ -78,6 +80,7 @@ export class StyleManager {
         flex-direction: column;
         align-items: stretch;
         min-height: 36px;
+        max-width: 280px;
         width: fit-content;
         overflow: hidden;
         user-select: none;
@@ -346,6 +349,99 @@ export class StyleManager {
         width: 100%;
       }
 
+      #${UI_ID} .lhvj-keyword-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+      }
+
+      #${UI_ID} .lhvj-keyword-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        min-height: 24px;
+        max-height: 80px;
+        overflow-y: auto;
+      }
+
+      #${UI_ID} .lhvj-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px 2px 8px;
+        border-radius: 999px;
+        background: rgba(155, 89, 182, 0.28);
+        border: 1px solid rgba(155, 89, 182, 0.5);
+        color: #d9b8ff;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+
+      #${UI_ID} .lhvj-chip-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        border: none;
+        background: rgba(155, 89, 182, 0.4);
+        color: #d9b8ff;
+        font-size: 12px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      #${UI_ID} .lhvj-chip-remove:hover {
+        background: rgba(155, 89, 182, 0.7);
+      }
+
+      #${UI_ID} .lhvj-chip-input-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      #${UI_ID} .lhvj-keyword-input {
+        flex: 1;
+        min-width: 0;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.07);
+        color: #e6edf3;
+        font-size: 11px;
+        outline: none;
+      }
+
+      #${UI_ID} .lhvj-keyword-input::placeholder {
+        color: #9aa8b6;
+      }
+
+      #${UI_ID} .lhvj-keyword-input:focus {
+        border-color: rgba(155, 89, 182, 0.6);
+        background: rgba(155, 89, 182, 0.12);
+      }
+
+      #${UI_ID} .lhvj-keyword-duplicate-msg {
+        font-size: 10px;
+        font-weight: 600;
+        color: #f59e0b;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        white-space: nowrap;
+      }
+
+      #${UI_ID} .lhvj-keyword-count {
+        font-size: 10px;
+        color: #9aa8b6;
+        font-weight: 500;
+      }
+
       #${UI_ID} .lhvj-opacity-input {
         flex: 1;
         accent-color: #9fd8ff;
@@ -513,6 +609,20 @@ export class StyleManager {
         box-shadow: inset 0 0 0 999px ${activeBackground} !important;
         border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
         background-color: ${activeBackground} !important;
+      }
+
+      .${KEYWORD_HIGHLIGHT_CLASS} {
+        box-shadow: inset 0 0 0 999px ${keywordBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${keywordBackground} !important;
+      }
+
+      .${KEYWORD_HIGHLIGHT_CLASS} .job-card-container,
+      .${KEYWORD_HIGHLIGHT_CLASS}[class*="job-card"],
+      .${KEYWORD_HIGHLIGHT_CLASS} > div {
+        box-shadow: inset 0 0 0 999px ${keywordBackground} !important;
+        border-radius: ${HIGHLIGHT_BORDER_RADIUS} !important;
+        background-color: ${keywordBackground} !important;
       }
 
       html.lhvj-pagination-cooldown div.jobs-search-pagination button,

@@ -24,10 +24,15 @@ export interface IStorageService {
   setViewedHighlightColor(color: string): void;
   setAppliedHighlightColor(color: string): void;
   setActiveHighlightColor(color: string): void;
+  setKeywordHighlightColor(color: string): void;
 
   resetViewedHighlightColor(): void;
   resetAppliedHighlightColor(): void;
   resetActiveHighlightColor(): void;
+  resetKeywordHighlightColor(): void;
+
+  getCustomKeywords(): string[];
+  setCustomKeywords(keywords: string[]): void;
 
   getHighlightOpacity(): number;
   setHighlightOpacity(value: number): void;

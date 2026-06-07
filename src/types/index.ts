@@ -1,11 +1,12 @@
 export type TDetectionMode = 'hide' | 'highlight';
 export type TDetectedJobState = 'viewed' | 'applied';
-export type THighlightColorTarget = TDetectedJobState | 'active';
+export type THighlightColorTarget = TDetectedJobState | 'active' | 'keyword';
 
 export interface IHighlightColors {
   viewed: string;
   applied: string;
   active: string;
+  keyword: string;
 }
 
 export interface IHighlightSettings {
@@ -39,6 +40,8 @@ export interface IConfig {
   readonly APPLIED_HIGHLIGHT_COLOR: string;
   /** Active-card accent color */
   readonly ACTIVE_HIGHLIGHT_COLOR: string;
+  /** Keyword-card highlight color */
+  readonly KEYWORD_HIGHLIGHT_COLOR: string;
   /** Default full-card highlight opacity */
   readonly HIGHLIGHT_OPACITY: number;
   /** Minimum allowed highlight opacity */
@@ -91,12 +94,17 @@ export interface IUIState {
   viewedColorInput: HTMLInputElement | null;
   appliedColorInput: HTMLInputElement | null;
   activeColorInput: HTMLInputElement | null;
+  keywordColorInput: HTMLInputElement | null;
   viewedColorResetBtn: HTMLButtonElement | null;
   appliedColorResetBtn: HTMLButtonElement | null;
   activeColorResetBtn: HTMLButtonElement | null;
+  keywordColorResetBtn: HTMLButtonElement | null;
   opacityInput: HTMLInputElement | null;
   opacityValue: HTMLSpanElement | null;
   opacityResetBtn: HTMLButtonElement | null;
+  keywordChipContainer: HTMLDivElement | null;
+  keywordChipInput: HTMLInputElement | null;
+  keywordCountDisplay: HTMLSpanElement | null;
 }
 
 /** Result from anchor-based viewed job detection */
@@ -114,6 +122,8 @@ export interface IDomIdentifiers {
   readonly VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY: string;
   readonly APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY: string;
   readonly ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY: string;
+  readonly KEYWORD_HIGHLIGHT_COLOR_STORAGE_KEY: string;
+  readonly CUSTOM_KEYWORDS_STORAGE_KEY: string;
   readonly HIGHLIGHT_OPACITY_STORAGE_KEY: string;
   readonly UI_POSITION_KEY: string;
   readonly HIDDEN_CLASS: string;
@@ -121,4 +131,5 @@ export interface IDomIdentifiers {
   readonly VIEWED_HIGHLIGHT_CLASS: string;
   readonly APPLIED_HIGHLIGHT_CLASS: string;
   readonly ACTIVE_HIGHLIGHT_CLASS: string;
+  readonly KEYWORD_HIGHLIGHT_CLASS: string;
 }

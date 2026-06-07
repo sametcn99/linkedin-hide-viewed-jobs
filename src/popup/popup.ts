@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
   VIEWED_COLOR: DOM_IDS.VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY,
   APPLIED_COLOR: DOM_IDS.APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY,
   ACTIVE_COLOR: DOM_IDS.ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY,
+  KEYWORD_COLOR: DOM_IDS.KEYWORD_HIGHLIGHT_COLOR_STORAGE_KEY,
+  CUSTOM_KEYWORDS: DOM_IDS.CUSTOM_KEYWORDS_STORAGE_KEY,
   OPACITY: DOM_IDS.HIGHLIGHT_OPACITY_STORAGE_KEY,
 } as const;
 
@@ -73,6 +75,9 @@ function initPopup(): void {
   const colorViewed = $<HTMLInputElement>('color-viewed');
   const colorApplied = $<HTMLInputElement>('color-applied');
   const colorActive = $<HTMLInputElement>('color-active');
+  const colorKeyword = $<HTMLInputElement>('color-keyword');
+  const keywordChipContainer = $<HTMLElement>('keyword-chip-container');
+  const keywordChipInput = $<HTMLInputElement>('keyword-chip-input');
   const opacitySlider = $<HTMLInputElement>('opacity-slider');
   const opacityValue = $<HTMLElement>('opacity-value');
   const resetBtns = document.querySelectorAll<HTMLButtonElement>('.reset-btn');
@@ -128,6 +133,7 @@ function initPopup(): void {
     !colorViewed ||
     !colorApplied ||
     !colorActive ||
+    !colorKeyword ||
     !opacitySlider ||
     !opacityValue ||
     !hiddenCountEl ||
@@ -164,6 +170,20 @@ function initPopup(): void {
 
       const activeColor = (result[STORAGE_KEYS.ACTIVE_COLOR] as string) || '#0a66c2';
       colorActive.value = activeColor;
+
+      const keywordColor = (result[STORAGE_KEYS.KEYWORD_COLOR] as string) || '#9b59b6';
+      colorKeyword.value = keywordColor;
+
+      const customKeywordsRaw = result[STORAGE_KEYS.CUSTOM_KEYWORDS] as string | undefined;
+      let customKeywords: string[] = [];
+      if (customKeywordsRaw) {
+        try {
+          customKeywords = JSON.parse(customKeywordsRaw) as string[];
+        } catch {
+          customKeywords = [];
+        }
+      }
+      renderKeywordChips(customKeywords);
 
       const opacity = Number(result[STORAGE_KEYS.OPACITY]) || 0.1;
       opacitySlider.value = String(opacity);
@@ -215,6 +235,79 @@ function initPopup(): void {
     saveSetting(STORAGE_KEYS.ACTIVE_COLOR, colorActive.value);
   });
 
+  colorKeyword.addEventListener('input', () => {
+    saveSetting(STORAGE_KEYS.KEYWORD_COLOR, colorKeyword.value);
+  });
+
+  function renderKeywordChips(keywords: string[]): void {
+    if (!keywordChipContainer) return;
+    keywordChipContainer.innerHTML = '';
+    for (const keyword of keywords) {
+      const chip = document.createElement('span');
+      chip.className = 'lhvj-chip';
+      chip.textContent = keyword;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'lhvj-chip-remove';
+      removeBtn.textContent = '×';
+      removeBtn.setAttribute('aria-label', `Remove keyword ${keyword}`);
+      removeBtn.addEventListener('click', () => {
+        const newKeywords = keywords.filter((k) => k !== keyword);
+        saveSetting(STORAGE_KEYS.CUSTOM_KEYWORDS, JSON.stringify(newKeywords));
+        renderKeywordChips(newKeywords);
+      });
+
+      chip.appendChild(removeBtn);
+      keywordChipContainer.appendChild(chip);
+    }
+    if (keywordChipInput) {
+      keywordChipInput.placeholder = 'Type keyword and press Enter';
+    }
+  }
+
+  if (keywordChipInput) {
+    keywordChipInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const value = keywordChipInput.value.trim().toLocaleLowerCase('tr-TR');
+        if (!value) return;
+        chrome.storage.local.get(
+          STORAGE_KEYS.CUSTOM_KEYWORDS,
+          (result: Record<string, unknown>) => {
+            let customKeywords: string[] = [];
+            const raw = result[STORAGE_KEYS.CUSTOM_KEYWORDS];
+            if (typeof raw === 'string' && raw.length > 0) {
+              try {
+                customKeywords = JSON.parse(raw) as string[];
+              } catch {
+                customKeywords = [];
+              }
+            }
+            if (customKeywords.includes(value)) {
+              const dupMsg = document.getElementById('keyword-duplicate-msg');
+              if (dupMsg) {
+                dupMsg.style.display = 'inline';
+                dupMsg.style.opacity = '1';
+                setTimeout(() => {
+                  dupMsg.style.opacity = '0';
+                  setTimeout(() => {
+                    dupMsg.style.display = 'none';
+                  }, 300);
+                }, 1500);
+              }
+              return;
+            }
+            const newKeywords = [...customKeywords, value];
+            saveSetting(STORAGE_KEYS.CUSTOM_KEYWORDS, JSON.stringify(newKeywords));
+            renderKeywordChips(newKeywords);
+            keywordChipInput.value = '';
+          }
+        );
+      }
+    });
+  }
+
   opacitySlider.addEventListener('input', () => {
     const val = parseFloat(opacitySlider.value);
     opacityValue.textContent = val.toFixed(2);
@@ -236,6 +329,10 @@ function initPopup(): void {
         case 'active':
           colorActive.value = '#0a66c2';
           saveSetting(STORAGE_KEYS.ACTIVE_COLOR, '#0a66c2');
+          break;
+        case 'keyword':
+          colorKeyword.value = '#9b59b6';
+          saveSetting(STORAGE_KEYS.KEYWORD_COLOR, '#9b59b6');
           break;
         case 'opacity':
           opacitySlider.value = '0.1';

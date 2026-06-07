@@ -73,6 +73,10 @@ export class LocalStorageService implements IStorageService {
         DOM_IDS.ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY,
         CONFIG.ACTIVE_HIGHLIGHT_COLOR
       ),
+      keyword: this.getHighlightColor(
+        DOM_IDS.KEYWORD_HIGHLIGHT_COLOR_STORAGE_KEY,
+        CONFIG.KEYWORD_HIGHLIGHT_COLOR
+      ),
     };
   }
 
@@ -97,6 +101,13 @@ export class LocalStorageService implements IStorageService {
     );
   }
 
+  setKeywordHighlightColor(color: string): void {
+    this.setItem(
+      DOM_IDS.KEYWORD_HIGHLIGHT_COLOR_STORAGE_KEY,
+      this.normalizeHighlightColor(color, CONFIG.KEYWORD_HIGHLIGHT_COLOR)
+    );
+  }
+
   resetViewedHighlightColor(): void {
     this.setViewedHighlightColor(CONFIG.VIEWED_HIGHLIGHT_COLOR);
   }
@@ -107,6 +118,33 @@ export class LocalStorageService implements IStorageService {
 
   resetActiveHighlightColor(): void {
     this.setActiveHighlightColor(CONFIG.ACTIVE_HIGHLIGHT_COLOR);
+  }
+
+  resetKeywordHighlightColor(): void {
+    this.setKeywordHighlightColor(CONFIG.KEYWORD_HIGHLIGHT_COLOR);
+  }
+
+  getCustomKeywords(): string[] {
+    try {
+      const raw = this.getItem(DOM_IDS.CUSTOM_KEYWORDS_STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return this.normalizeKeywords(parsed.filter((k): k is string => typeof k === 'string'));
+    } catch {
+      return [];
+    }
+  }
+
+  setCustomKeywords(keywords: string[]): void {
+    const normalized = this.normalizeKeywords(keywords);
+    this.setItem(DOM_IDS.CUSTOM_KEYWORDS_STORAGE_KEY, JSON.stringify(normalized));
+  }
+
+  private normalizeKeywords(keywords: string[]): string[] {
+    return Array.from(
+      new Set(keywords.map((k) => k.trim().toLowerCase()).filter((k) => k.length > 0))
+    );
   }
 
   getHighlightOpacity(): number {

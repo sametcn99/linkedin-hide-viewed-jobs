@@ -7,19 +7,53 @@ import type { TDetectedJobState } from '../types';
 export class KeywordMatcher {
   private readonly normalizedViewedKeywords: string[];
   private readonly normalizedAppliedKeywords: string[];
+  private normalizedCustomKeywords: string[];
 
-  constructor() {
+  constructor(customKeywords: string[] = []) {
     this.normalizedViewedKeywords = VIEWED_KEYWORDS.map((kw) => this.normalize(kw)).filter(
       (kw) => kw.length > 0
     );
     this.normalizedAppliedKeywords = APPLIED_KEYWORDS.map((kw) => this.normalize(kw)).filter(
       (kw) => kw.length > 0
     );
+    this.normalizedCustomKeywords = customKeywords
+      .map((kw) => this.normalize(kw))
+      .filter((kw) => kw.length > 0);
+  }
+
+  setCustomKeywords(keywords: string[]): void {
+    this.normalizedCustomKeywords = keywords
+      .map((kw) => this.normalize(kw))
+      .filter((kw) => kw.length > 0);
+  }
+
+  matchCustomKeywords(text: string): boolean {
+    if (this.normalizedCustomKeywords.length === 0) return false;
+    const normalized = this.normalize(text);
+    if (!normalized) return false;
+    return this.containsAnySubstring(normalized, this.normalizedCustomKeywords);
+  }
+
+  matchCustomKeywordsFromElement(el: HTMLElement): boolean {
+    const text = (el.textContent || '').trim();
+    const aria = el.getAttribute('aria-label') || '';
+    const title = el.getAttribute('title') || '';
+    const altTexts: string[] = [];
+    el.querySelectorAll<HTMLElement>('[alt]').forEach((child) => {
+      const alt = child.getAttribute('alt');
+      if (alt) altTexts.push(alt);
+    });
+    return (
+      this.matchCustomKeywords(text) ||
+      this.matchCustomKeywords(aria) ||
+      this.matchCustomKeywords(title) ||
+      (altTexts.length > 0 && altTexts.some((a) => this.matchCustomKeywords(a)))
+    );
   }
 
   normalize(text: string): string {
     return (text || '')
-      .toLocaleLowerCase('tr-TR')
+      .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
   }
@@ -56,6 +90,13 @@ export class KeywordMatcher {
       if (this.containsKeywordExactly(text, keyword)) {
         return true;
       }
+    }
+    return false;
+  }
+
+  private containsAnySubstring(text: string, keywords: readonly string[]): boolean {
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) return true;
     }
     return false;
   }

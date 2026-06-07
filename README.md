@@ -54,10 +54,11 @@ This project focuses on three things: stable LinkedIn SPA behavior, high-confide
   - `Highlight Mode`: Keeps jobs visible but adds separate low-opacity full-card color filters for `viewed` and `applied` cards.
 - **Active Card Accent**: On `jobs` and `jobs/search` views, the currently open job card gets its own configurable highlight filter color so the selected row stays easy to spot.
 - **Draggable Handle**: Reposition the badge anywhere on the screen.
-- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes, tune `viewed`, `applied`, and `active` card colors, adjust filter opacity, and open the GitHub repository.
+- **Custom Keyword Highlights**: Add your own keywords to highlight or hide job cards based on company names, job titles, or any text appearing on the card — useful for filtering listings from specific companies or matching role titles you are targeting. Custom keywords are matched across **every** job card on the page (including recommended/discovery cards), independently of whether a card was previously viewed or applied to. Keyword matches take priority: keyword > active > viewed/applied. Keywords are managed via chip input in the settings panel with duplicate detection.
+- **Dynamic Settings Panel**: Expandable menu to switch between `Hide` and `Highlight` modes, tune `viewed`, `applied`, `active`, and `keyword` card colors, adjust filter opacity, and open the GitHub repository.
 - **Navigation Reload Toggle**: Choose whether SPA path changes should trigger a full page reload or stay on soft refresh.
-- **Live Counter**: Track `N viewed` or `N hidden` items in real-time.
-- **Persistence**: Remembers your preferences for `ON/OFF`, `Scroll Guard`, `Detection Mode`, `Navigation Reload`, `Viewed/Applied/Active Colors`, `Filter Opacity`, and `Badge Position`.
+- **Live Counter**: Track the total number of detected cards (`N hidden`/`N marked`) — which includes both viewed/applied detections and custom-keyword matches, counted once per card — with a `+N keyword` breakdown showing how many of those are keyword matches, all updated in real-time.
+- **Persistence**: Remembers your preferences for `ON/OFF`, `Scroll Guard`, `Detection Mode`, `Navigation Reload`, `Viewed/Applied/Active/Keyword Colors`, `Filter Opacity`, `Custom Keywords`, and `Badge Position`.
 - **Robust Navigation**: Full support for LinkedIn's SPA routing; automatically restarts scanning when you switch pages or collections.
 - **Multilingual**: Intelligent keyword detection across 15+ languages.
 
@@ -174,7 +175,8 @@ The script supports detection for the following languages:
 1. In settings, `Reload OFF` is the default. SPA navigation stays on soft refresh unless you explicitly enable `Reload ON`.
 1. In `Highlight` mode, `Viewed` and `Applied` cards use different colors so you can distinguish them at a glance.
 1. On `jobs` and `jobs/search` pages, the currently selected card also gets its own full highlight filter color.
-1. In settings, use the native color pickers to adjust `Viewed`, `Applied`, and `Active` card colors, and use the opacity slider to make the highlight filter lighter or stronger.
+1. In settings, use the native color pickers to adjust `Viewed`, `Applied`, `Active`, and `Keyword` card colors, and use the opacity slider to make the highlight filter lighter or stronger.
+1. In settings, type a keyword in the chip input and press `Enter` to add it. Matching job cards are highlighted or hidden depending on the detection mode. Click the `×` on any chip to remove a keyword.
 1. The settings panel includes a direct `GitHub Repo` shortcut for the project source and issue tracker.
 1. If rapid downward scrolling is detected while most cards are viewed/hidden, the guard can enter a random cooldown (`5-15s`) and slow scroll steps to reduce LinkedIn rate-limit risk.
 1. If guard is triggered again while a cooldown is already active, the new cooldown is added on top of the remaining time (stacked), instead of restarting as separate back-to-back cooldowns.
@@ -205,6 +207,7 @@ Common knobs:
 - `STORAGE_KEY`: Preference storage key
 - `UI_POSITION_KEY`: Badge position storage key
 - `HIDDEN_CLASS`: CSS class used for hiding
+- `KEYWORD_HIGHLIGHT_COLOR`: Highlight/overlay color for keyword-matched cards
 
 ## Architecture
 
@@ -236,8 +239,8 @@ popup.ts ← chrome.storage.local → background.ts → chrome.storage.onChanged
 Both modes share the same core business logic:
 
 - `src/core/App.ts` — orchestrator (accepts `IStorageService` via dependency injection)
-- `src/services/DetectionService.ts` — viewed/applied detection
-- `src/services/KeywordMatcher.ts` — multilingual keyword matching
+- `src/services/DetectionService.ts` — viewed/applied/keyword detection
+- `src/services/KeywordMatcher.ts` — multilingual keyword matching and custom keyword matching
 - `src/services/RouterService.ts` — SPA route change detection
 - `src/ui/Badge.ts` — in-page badge UI
 - `src/ui/StyleManager.ts` — CSS injection

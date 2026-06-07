@@ -16,6 +16,7 @@ type HighlightColorChangeCallback = (target: THighlightColorTarget, color: strin
 type HighlightColorResetCallback = (target: THighlightColorTarget) => void;
 type HighlightOpacityChangeCallback = (value: number) => void;
 type HighlightOpacityResetCallback = () => void;
+type CustomKeywordsChangeCallback = (keywords: string[]) => void;
 
 /**
  * The draggable UI badge that shows viewed/hidden job counts.
@@ -32,6 +33,8 @@ export class Badge {
   private readonly onHighlightColorReset: HighlightColorResetCallback;
   private readonly onHighlightOpacityChange: HighlightOpacityChangeCallback;
   private readonly onHighlightOpacityReset: HighlightOpacityResetCallback;
+  private readonly onCustomKeywordsChange: CustomKeywordsChangeCallback;
+  private customKeywords: string[] = [];
   private readonly state: IUIState = {
     root: null,
     countNum: null,
@@ -47,12 +50,17 @@ export class Badge {
     viewedColorInput: null,
     appliedColorInput: null,
     activeColorInput: null,
+    keywordColorInput: null,
     viewedColorResetBtn: null,
     appliedColorResetBtn: null,
     activeColorResetBtn: null,
+    keywordColorResetBtn: null,
     opacityInput: null,
     opacityValue: null,
     opacityResetBtn: null,
+    keywordChipContainer: null,
+    keywordChipInput: null,
+    keywordCountDisplay: null,
   };
   private isDragging = false;
 
@@ -65,7 +73,8 @@ export class Badge {
     onHighlightColorChange: HighlightColorChangeCallback,
     onHighlightColorReset: HighlightColorResetCallback,
     onHighlightOpacityChange: HighlightOpacityChangeCallback,
-    onHighlightOpacityReset: HighlightOpacityResetCallback
+    onHighlightOpacityReset: HighlightOpacityResetCallback,
+    onCustomKeywordsChange: CustomKeywordsChangeCallback
   ) {
     this.storage = storage;
     this.onToggle = onToggle;
@@ -76,6 +85,8 @@ export class Badge {
     this.onHighlightColorReset = onHighlightColorReset;
     this.onHighlightOpacityChange = onHighlightOpacityChange;
     this.onHighlightOpacityReset = onHighlightOpacityReset;
+    this.onCustomKeywordsChange = onCustomKeywordsChange;
+    this.customKeywords = this.storage.getCustomKeywords();
   }
 
   /** Create or reattach the badge, returns the root element */
@@ -122,7 +133,8 @@ export class Badge {
     detectionMode: TDetectionMode,
     reloadOnNavigationEnabled: boolean,
     highlightSettings: IHighlightSettings,
-    cooldownSecondsLeft = 0
+    cooldownSecondsLeft = 0,
+    keywordCount = 0
   ): void {
     const root = this.state.root;
     if (
@@ -139,6 +151,7 @@ export class Badge {
       !this.state.viewedColorInput ||
       !this.state.appliedColorInput ||
       !this.state.activeColorInput ||
+      !this.state.keywordColorInput ||
       !this.state.opacityInput ||
       !this.state.opacityValue
     ) {
@@ -173,12 +186,18 @@ export class Badge {
     this.state.viewedColorInput.value = highlightSettings.colors.viewed;
     this.state.appliedColorInput.value = highlightSettings.colors.applied;
     this.state.activeColorInput.value = highlightSettings.colors.active;
+    this.state.keywordColorInput.value = highlightSettings.colors.keyword;
     this.state.opacityInput.value = String(highlightSettings.opacity);
     this.state.opacityValue.textContent = `${Math.round(highlightSettings.opacity * 100)}%`;
     this.state.reloadNavBtn.textContent = reloadOnNavigationEnabled ? 'Reload ON' : 'Reload OFF';
     this.state.reloadNavBtn.setAttribute('data-active', reloadOnNavigationEnabled ? '1' : '0');
     this.state.settingsBtn.textContent =
       root.getAttribute('data-settings-open') === '1' ? 'Close settings' : 'Open settings';
+    if (this.state.keywordCountDisplay) {
+      this.state.keywordCountDisplay.textContent =
+        keywordCount > 0 ? `+${keywordCount} keyword` : '';
+    }
+    this.syncKeywordChips();
   }
 
   /** Remove the badge from the DOM */
@@ -199,12 +218,17 @@ export class Badge {
     this.state.viewedColorInput = null;
     this.state.appliedColorInput = null;
     this.state.activeColorInput = null;
+    this.state.keywordColorInput = null;
     this.state.viewedColorResetBtn = null;
     this.state.appliedColorResetBtn = null;
     this.state.activeColorResetBtn = null;
+    this.state.keywordColorResetBtn = null;
     this.state.opacityInput = null;
     this.state.opacityValue = null;
     this.state.opacityResetBtn = null;
+    this.state.keywordChipContainer = null;
+    this.state.keywordChipInput = null;
+    this.state.keywordCountDisplay = null;
   }
 
   /** Clamp badge position within the viewport */
@@ -355,6 +379,63 @@ export class Badge {
       this.onReloadNavigationToggle(enabled);
     });
 
+    const keywordLabel = document.createElement('span');
+    keywordLabel.className = 'lhvj-settings-label';
+    keywordLabel.textContent = 'Custom keywords:';
+
+    const keywordRow = document.createElement('div');
+    keywordRow.className = 'lhvj-keyword-row';
+
+    const chipContainer = document.createElement('div');
+    chipContainer.className = 'lhvj-keyword-chips';
+
+    const chipInputRow = document.createElement('div');
+    chipInputRow.className = 'lhvj-chip-input-row';
+
+    const chipInput = document.createElement('input');
+    chipInput.type = 'text';
+    chipInput.className = 'lhvj-keyword-input';
+    chipInput.placeholder = 'Type keyword and press Enter';
+    chipInput.setAttribute('aria-label', 'Add custom keyword');
+
+    const duplicateMsg = document.createElement('span');
+    duplicateMsg.className = 'lhvj-keyword-duplicate-msg';
+    duplicateMsg.textContent = 'Already added';
+    duplicateMsg.style.display = 'none';
+
+    chipInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const value = chipInput.value.trim().toLowerCase();
+        if (!value) return;
+        if (this.customKeywords.includes(value)) {
+          duplicateMsg.style.display = 'inline';
+          duplicateMsg.style.opacity = '1';
+          setTimeout(() => {
+            duplicateMsg.style.opacity = '0';
+            setTimeout(() => {
+              duplicateMsg.style.display = 'none';
+            }, 300);
+          }, 1500);
+          return;
+        }
+        const newKeywords = [...this.customKeywords, value];
+        this.customKeywords = newKeywords;
+        this.onCustomKeywordsChange(newKeywords);
+        chipInput.value = '';
+        this.renderKeywordChips(chipContainer, chipInput);
+      }
+    });
+
+    chipInputRow.appendChild(chipInput);
+    chipInputRow.appendChild(duplicateMsg);
+
+    keywordRow.appendChild(chipContainer);
+    keywordRow.appendChild(chipInputRow);
+
+    settingsPanel.appendChild(keywordLabel);
+    settingsPanel.appendChild(keywordRow);
+
     settingsPanel.appendChild(modeLabel);
     settingsPanel.appendChild(modeGroup);
     settingsPanel.appendChild(reloadLabel);
@@ -382,10 +463,16 @@ export class Badge {
       highlightSettings.colors.active,
       'active'
     );
+    const keywordColorControl = this.buildColorControl(
+      'Keyword',
+      highlightSettings.colors.keyword,
+      'keyword'
+    );
 
     colorGrid.appendChild(viewedColorControl);
     colorGrid.appendChild(appliedColorControl);
     colorGrid.appendChild(activeColorControl);
+    colorGrid.appendChild(keywordColorControl);
 
     settingsPanel.appendChild(colorLabel);
     settingsPanel.appendChild(colorGrid);
@@ -430,6 +517,8 @@ export class Badge {
     settingsPanel.appendChild(opacityLabel);
     settingsPanel.appendChild(opacityRow);
 
+    this.renderKeywordChips(chipContainer, chipInput);
+
     const repoLabel = document.createElement('span');
     repoLabel.className = 'lhvj-settings-label';
     repoLabel.textContent = 'Project:';
@@ -450,6 +539,11 @@ export class Badge {
     main.appendChild(cooldownEl);
     footer.appendChild(settingsBtn);
     footer.appendChild(countEl);
+
+    const keywordCountDisplay = document.createElement('span');
+    keywordCountDisplay.className = 'lhvj-keyword-count-display';
+    keywordCountDisplay.textContent = '';
+    footer.appendChild(keywordCountDisplay);
 
     content.appendChild(main);
     content.appendChild(footer);
@@ -481,12 +575,17 @@ export class Badge {
     this.state.viewedColorInput = root.querySelector('.lhvj-viewed-color-input');
     this.state.appliedColorInput = root.querySelector('.lhvj-applied-color-input');
     this.state.activeColorInput = root.querySelector('.lhvj-active-color-input');
+    this.state.keywordColorInput = root.querySelector('.lhvj-keyword-color-input');
     this.state.viewedColorResetBtn = root.querySelector('.lhvj-viewed-color-reset');
     this.state.appliedColorResetBtn = root.querySelector('.lhvj-applied-color-reset');
     this.state.activeColorResetBtn = root.querySelector('.lhvj-active-color-reset');
+    this.state.keywordColorResetBtn = root.querySelector('.lhvj-keyword-color-reset');
     this.state.opacityInput = root.querySelector('.lhvj-opacity-input');
     this.state.opacityValue = root.querySelector('.lhvj-opacity-value');
     this.state.opacityResetBtn = root.querySelector('.lhvj-opacity-reset');
+    this.state.keywordChipContainer = root.querySelector('.lhvj-keyword-chips');
+    this.state.keywordChipInput = root.querySelector('.lhvj-keyword-input');
+    this.state.keywordCountDisplay = root.querySelector('.lhvj-keyword-count-display');
   }
 
   private buildColorControl(
@@ -547,6 +646,46 @@ export class Badge {
     root.style.top = `${clamped.top}px`;
     root.style.right = 'auto';
     if (save) this.storage.savePosition(clamped);
+  }
+
+  private renderKeywordChips(container: HTMLDivElement, input: HTMLInputElement): void {
+    container.innerHTML = '';
+    for (const keyword of this.customKeywords) {
+      const chip = document.createElement('span');
+      chip.className = 'lhvj-chip';
+      chip.textContent = keyword;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'lhvj-chip-remove';
+      removeBtn.textContent = '×';
+      removeBtn.setAttribute('aria-label', `Remove keyword ${keyword}`);
+      removeBtn.addEventListener('click', () => {
+        const newKeywords = this.customKeywords.filter((k) => k !== keyword);
+        this.customKeywords = newKeywords;
+        this.onCustomKeywordsChange(newKeywords);
+        this.renderKeywordChips(container, input);
+      });
+
+      chip.appendChild(removeBtn);
+      container.appendChild(chip);
+    }
+    if (input) {
+      input.placeholder = 'Type keyword and press Enter';
+    }
+  }
+
+  private syncKeywordChips(): void {
+    if (!this.state.keywordChipContainer || !this.state.keywordChipInput) return;
+    const existing = Array.from(this.state.keywordChipContainer.querySelectorAll('.lhvj-chip')).map(
+      (el) => el.childNodes[0]?.textContent ?? ''
+    );
+    if (
+      existing.length !== this.customKeywords.length ||
+      !existing.every((text, i) => text === this.customKeywords[i])
+    ) {
+      this.renderKeywordChips(this.state.keywordChipContainer, this.state.keywordChipInput);
+    }
   }
 
   private makeDraggable(root: HTMLDivElement, dragHandle: HTMLElement): void {

@@ -27,6 +27,27 @@ export class DetectionService {
     return Array.from(cardSet);
   }
 
+  /**
+   * Collect candidate cards for custom-keyword matching, independent of
+   * viewed/applied state. Includes primary job cards plus cards resolvable
+   * from job anchors (e.g. discovery/recommended modules) so keyword
+   * highlighting works even when a card was never viewed or applied to.
+   */
+  getKeywordCandidateCards(): HTMLElement[] {
+    const cardSet = new Set<HTMLElement>();
+
+    document.querySelectorAll<HTMLElement>(CARD_SELECTOR_JOINED).forEach((node) => {
+      cardSet.add(node);
+    });
+
+    this.getPotentialViewedAnchors().forEach((anchor) => {
+      const card = this.getCardFromAnchor(anchor);
+      if (card) cardSet.add(card);
+    });
+
+    return Array.from(cardSet);
+  }
+
   /** Find cards that are marked as viewed via marker selectors */
   getDetectedCardsFromMarkers(): Map<HTMLElement, TDetectedJobState> {
     const detectedCards = new Map<HTMLElement, TDetectedJobState>();
@@ -186,6 +207,17 @@ export class DetectionService {
 
     card.classList.remove(DOM_IDS.ACTIVE_HIGHLIGHT_CLASS);
     card.removeAttribute('data-lhvj-active');
+  }
+
+  applyKeywordHighlight(card: HTMLElement, isKeywordMatched: boolean): void {
+    if (isKeywordMatched) {
+      card.classList.add(DOM_IDS.KEYWORD_HIGHLIGHT_CLASS);
+      card.setAttribute('data-lhvj-keyword', '1');
+      return;
+    }
+
+    card.classList.remove(DOM_IDS.KEYWORD_HIGHLIGHT_CLASS);
+    card.removeAttribute('data-lhvj-keyword');
   }
 
   isJobsPage(): boolean {

@@ -13,6 +13,7 @@ export const CONFIG: IConfig = Object.freeze({
   VIEWED_HIGHLIGHT_COLOR: '#2ecc71',
   APPLIED_HIGHLIGHT_COLOR: '#f59e0b',
   ACTIVE_HIGHLIGHT_COLOR: '#0a66c2',
+  KEYWORD_HIGHLIGHT_COLOR: '#9b59b6',
   HIGHLIGHT_OPACITY: 0.1,
   HIGHLIGHT_OPACITY_MIN: 0.04,
   HIGHLIGHT_OPACITY_MAX: 0.28,
@@ -37,6 +38,8 @@ export const DOM_IDS: IDomIdentifiers = Object.freeze({
   VIEWED_HIGHLIGHT_COLOR_STORAGE_KEY: 'lhvj-viewed-highlight-color',
   APPLIED_HIGHLIGHT_COLOR_STORAGE_KEY: 'lhvj-applied-highlight-color',
   ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY: 'lhvj-active-highlight-color',
+  KEYWORD_HIGHLIGHT_COLOR_STORAGE_KEY: 'lhvj-keyword-highlight-color',
+  CUSTOM_KEYWORDS_STORAGE_KEY: 'lhvj-custom-keywords',
   HIGHLIGHT_OPACITY_STORAGE_KEY: 'lhvj-highlight-opacity',
   UI_POSITION_KEY: 'lhvj-ui-position',
   HIDDEN_CLASS: 'lhvj-hidden-by-script',
@@ -44,4 +47,5 @@ export const DOM_IDS: IDomIdentifiers = Object.freeze({
   VIEWED_HIGHLIGHT_CLASS: 'lhvj-viewed-highlight',
   APPLIED_HIGHLIGHT_CLASS: 'lhvj-applied-highlight',
   ACTIVE_HIGHLIGHT_CLASS: 'lhvj-active-highlight',
+  KEYWORD_HIGHLIGHT_CLASS: 'lhvj-keyword-highlight',
 });

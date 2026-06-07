@@ -58,6 +58,15 @@
     </section>
 
     <section class="popup-section">
+      <div class="keyword-row">
+        <span class="keyword-label">Custom Keywords</span>
+        <div id="keyword-chip-container" class="keyword-chip-container"></div>
+        <input type="text" id="keyword-chip-input" class="keyword-chip-input" placeholder="Type keyword and press Enter" aria-label="Add custom keyword" />
+        <span id="keyword-duplicate-msg" class="keyword-duplicate-msg">Already added</span>
+      </div>
+    </section>
+
+    <section class="popup-section">
       <h2 class="section-title">Detection Mode</h2>
       <div class="radio-group">
         <label class="radio-row">
@@ -95,6 +104,14 @@
         <div class="color-input-group">
           <input type="color" id="color-active" class="color-input" />
           <button class="reset-btn" data-target="active" aria-label="Reset active color">↺</button>
+        </div>
+      </label>
+
+      <label class="color-row">
+        <span class="color-label">Keyword Color</span>
+        <div class="color-input-group">
+          <input type="color" id="color-keyword" class="color-input" />
+          <button class="reset-btn" data-target="keyword" aria-label="Reset keyword color">↺</button>
         </div>
       </label>
 

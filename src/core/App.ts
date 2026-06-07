@@ -35,7 +35,10 @@ export class App {
   private reloadOnNavigationEnabled: boolean;
   private highlightColors: IHighlightColors;
   private highlightOpacity: number;
+  private customKeywords: string[] = [];
   private hiddenCount = 0;
+  private detectedCount = 0;
+  private keywordCount = 0;
   private rafId = 0;
   private isRuntimeActive = false;
   private isReloadingForPathChange = false;
@@ -52,7 +55,8 @@ export class App {
   constructor(storage: IStorageService, options?: AppOptions) {
     this.storage = storage;
     this.showBadge = options?.showBadge !== false;
-    this.matcher = new KeywordMatcher();
+    this.customKeywords = this.storage.getCustomKeywords();
+    this.matcher = new KeywordMatcher(this.customKeywords);
     this.detection = new DetectionService(this.matcher);
     this.styleManager = new StyleManager();
     this.showHidden = this.storage.getShowHidden();
@@ -103,6 +107,9 @@ export class App {
         },
         () => {
           this.resetHighlightOpacity();
+        },
+        (keywords) => {
+          this.updateCustomKeywords(keywords);
         }
       );
     } else {
@@ -134,6 +141,8 @@ export class App {
     this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation();
     this.highlightColors = this.storage.getHighlightColors();
     this.highlightOpacity = this.storage.getHighlightOpacity();
+    this.customKeywords = this.storage.getCustomKeywords();
+    this.matcher.setCustomKeywords(this.customKeywords);
     this.styleManager.updateHighlightStyles(this.getHighlightSettings());
 
     if (previousMode !== this.detectionMode) {
@@ -155,7 +164,7 @@ export class App {
   /** Get current stats — used by extension popup */
   getStats(): { hiddenCount: number; isJobsPage: boolean; cooldownSecondsLeft: number } {
     return {
-      hiddenCount: this.hiddenCount,
+      hiddenCount: this.detectedCount,
       isJobsPage: this.detection.isJobsPage(),
       cooldownSecondsLeft: this.getCooldownSecondsLeft(),
     };
@@ -225,6 +234,8 @@ export class App {
 
     if (!this.detection.isJobsPage()) {
       this.hiddenCount = 0;
+      this.detectedCount = 0;
+      this.keywordCount = 0;
       this.resetScrollCooldown();
       this.resetCountBasedCooldownProgress();
       this.badge?.remove();
@@ -233,6 +244,8 @@ export class App {
 
     if (!this.showHidden) {
       this.hiddenCount = 0;
+      this.detectedCount = 0;
+      this.keywordCount = 0;
       this.resetScrollCooldown();
       this.resetCountBasedCooldownProgress();
       this.clearDetectedVisualState();
@@ -250,6 +263,7 @@ export class App {
         this.detectionMode,
         this.reloadOnNavigationEnabled,
         this.getHighlightSettings(),
+        0,
         0
       );
       return;
@@ -289,23 +303,50 @@ export class App {
     const cardSet = new Set(cards);
     const activeCards = this.detection.getActiveCards(cardSet);
 
+    // Custom-keyword matching is independent of viewed/applied detection: it
+    // scans every keyword-candidate card on the page, including discovery /
+    // recommended cards that were never viewed or applied to.
+    const keywordMatchedCards = new Set<HTMLElement>();
+    if (this.customKeywords.length > 0) {
+      for (const card of this.detection.getKeywordCandidateCards()) {
+        if (this.matcher.matchCustomKeywordsFromElement(card)) {
+          keywordMatchedCards.add(card);
+        }
+      }
+    }
+
     for (const card of cards) {
       const state = finalDetectedCards.get(card) ?? null;
-      this.detection.applyVisibility(card, !!state && shouldHideDetected);
+      const isKeywordMatched = keywordMatchedCards.has(card);
+      this.detection.applyVisibility(card, (!!state || isKeywordMatched) && shouldHideDetected);
       this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
       this.detection.applyActiveHighlight(card, activeCards.has(card));
+      this.detection.applyKeywordHighlight(card, !shouldHideDetected && isKeywordMatched);
     }
 
     finalDetectedCards.forEach((state, card) => {
       if (cardSet.has(card)) return;
+      const isKeywordMatched = keywordMatchedCards.has(card);
       this.detection.applyVisibility(card, shouldHideDetected);
       this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
       this.detection.applyActiveHighlight(card, activeCards.has(card));
+      this.detection.applyKeywordHighlight(card, !shouldHideDetected && isKeywordMatched);
+    });
+
+    // Keyword-matched cards that are neither primary cards nor viewed/applied
+    // (e.g. discovery cards that were never viewed) still need highlighting.
+    keywordMatchedCards.forEach((card) => {
+      if (cardSet.has(card) || finalDetectedCards.has(card)) return;
+      this.detection.applyVisibility(card, shouldHideDetected);
+      this.detection.applyActiveHighlight(card, activeCards.has(card));
+      this.detection.applyKeywordHighlight(card, !shouldHideDetected);
     });
 
     // Clean up stale card states
     document.querySelectorAll<HTMLElement>('[data-lhvj-hidden="1"]').forEach((node) => {
-      if (!shouldHideDetected || !finalDetectedCards.has(node)) {
+      const shouldStayHidden =
+        shouldHideDetected && (finalDetectedCards.has(node) || keywordMatchedCards.has(node));
+      if (!shouldStayHidden) {
         this.detection.applyVisibility(node, false);
       }
     });
@@ -324,7 +365,25 @@ export class App {
       }
     });
 
+    document.querySelectorAll<HTMLElement>('[data-lhvj-keyword="1"]').forEach((node) => {
+      if (shouldHideDetected || !keywordMatchedCards.has(node)) {
+        this.detection.applyKeywordHighlight(node, false);
+      }
+    });
+
     this.hiddenCount = Math.max(finalDetectedCards.size, anchorResult.detectedAnchorCount);
+
+    this.keywordCount = keywordMatchedCards.size;
+
+    // The badge's main count reflects every detected card the user cares about:
+    // viewed/applied detections plus keyword matches, counted once per card.
+    const detectedUnion = new Set<HTMLElement>(keywordMatchedCards);
+    finalDetectedCards.forEach((_state, card) => detectedUnion.add(card));
+    const anchorOnlyOverflow = Math.max(
+      0,
+      anchorResult.detectedAnchorCount - finalDetectedCards.size
+    );
+    this.detectedCount = detectedUnion.size + anchorOnlyOverflow;
 
     this.maybeStartCountBasedCooldown(previousHiddenCount);
 
@@ -336,13 +395,14 @@ export class App {
       this.getHighlightSettings()
     );
     this.badge?.updateCount(
-      this.hiddenCount,
+      this.detectedCount,
       this.showHidden,
       this.scrollGuardEnabled,
       this.detectionMode,
       this.reloadOnNavigationEnabled,
       this.getHighlightSettings(),
-      this.getCooldownSecondsLeft()
+      this.getCooldownSecondsLeft(),
+      this.keywordCount
     );
   }
 
@@ -351,8 +411,10 @@ export class App {
       this.storage.setViewedHighlightColor(color);
     } else if (target === 'applied') {
       this.storage.setAppliedHighlightColor(color);
-    } else {
+    } else if (target === 'active') {
       this.storage.setActiveHighlightColor(color);
+    } else {
+      this.storage.setKeywordHighlightColor(color);
     }
 
     this.highlightColors = this.storage.getHighlightColors();
@@ -365,13 +427,24 @@ export class App {
       this.storage.resetViewedHighlightColor();
     } else if (target === 'applied') {
       this.storage.resetAppliedHighlightColor();
-    } else {
+    } else if (target === 'active') {
       this.storage.resetActiveHighlightColor();
+    } else {
+      this.storage.resetKeywordHighlightColor();
     }
 
     this.highlightColors = this.storage.getHighlightColors();
     this.styleManager.updateHighlightStyles(this.getHighlightSettings());
     this.scheduleRefresh();
+  }
+
+  private updateCustomKeywords(keywords: string[]): void {
+    this.storage.setCustomKeywords(keywords);
+    this.customKeywords = this.storage.getCustomKeywords();
+    this.matcher.setCustomKeywords(this.customKeywords);
+    this.scheduleRefresh();
+    setTimeout(() => this.scheduleRefresh(), 300);
+    setTimeout(() => this.scheduleRefresh(), 1000);
   }
 
   private updateHighlightOpacity(value: number): void {
@@ -562,7 +635,10 @@ export class App {
       return false;
     }
 
-    cancelDefault();
+    if (this.shouldLockScroll()) {
+      cancelDefault();
+    }
+
     this.applyControlledScroll(deltaY);
     return true;
   }
@@ -573,9 +649,12 @@ export class App {
     return this.detection.isJobsPage();
   }
 
+  private shouldLockScroll(): boolean {
+    return this.isCooldownActive && this.isJobsHomepage();
+  }
+
   private shouldBlockMiddleMouseDuringCooldown(): boolean {
-    if (!this.isCooldownActive) return false;
-    return this.shouldUseScrollGuard();
+    return this.shouldLockScroll();
   }
 
   private shouldUseCountBasedCooldown(): boolean {
@@ -698,6 +777,10 @@ export class App {
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-active="1"]').forEach((node) => {
       this.detection.applyActiveHighlight(node, false);
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-lhvj-keyword="1"]').forEach((node) => {
+      this.detection.applyKeywordHighlight(node, false);
     });
 
     document.querySelectorAll<HTMLElement>('a[data-lhvj-hidden-anchor="1"]').forEach((node) => {
