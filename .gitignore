@@ -4,3 +4,4 @@ dist/
 *.zip
 linkedin-hide-viewed-jobs.user.js
 .omo/
+.env
