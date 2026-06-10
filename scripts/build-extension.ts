@@ -135,7 +135,7 @@ function getFirefoxManifest(version: string) {
 }
 
 function copyStaticFiles(distDir: string) {
-  const iconsSrc = `${ROOT}/icons`
+  const iconsSrc = `${ROOT}/assets/icons`
   const iconsDest = `${distDir}/icons`
   mkdirSync(iconsDest, { recursive: true })
 

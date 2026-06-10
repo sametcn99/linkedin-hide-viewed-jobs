@@ -54,8 +54,11 @@ src/
     ui/
       popup/             # Popup UI (HTML, CSS, TS modules)
 scripts/                 # Build, package, and release automation
-icons/                   # Extension and PWA icons
+assets/                  # Static site and extension assets
+  icons/                 # Extension and PWA icons
+  screenshots/           # README and site screenshots
 ```
+
 The browser extension's `manifest.json` is generated at build time in `scripts/build-extension.ts` (see `getChromeManifest` / `getFirefoxManifest`); no source manifest is committed.
 
 ### Dependency Injection for Badge
@@ -170,10 +173,10 @@ This repository is configured to publish a Jekyll-based documentation site from 
 
 Included site assets:
 
-- `manifest` via `icons/site.webmanifest`
+- `manifest` via `assets/icons/site.webmanifest`
 - `robots.txt`
 - `sitemap.xml`
-- Favicon and Apple touch icon links from `icons/`
+- Favicon and Apple touch icon links from `assets/icons/`
 - Open Graph, Twitter, canonical, and JSON-LD metadata
 
 To publish:

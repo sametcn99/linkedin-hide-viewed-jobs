@@ -3,9 +3,9 @@
 A privacy-first browser tool that hides or highlights the job postings you have already viewed on LinkedIn — so you can focus on what is new.
 
 Available as a **userscript** (Tampermonkey / Violentmonkey) or a **standalone browser extension** for Chrome and Firefox. No account. No tracking. No external requests.
+![Userscript badge](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master/assets/screenshots/userscript.png)
 
-![Userscript badge](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master//screenshots/userscript.png)
-![Extension popup](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master//screenshots/extension.png)
+![Extension popup](https://raw.githubusercontent.com/sametcn99/linkedin-hide-viewed-jobs/refs/heads/master/assets/screenshots/extension.png)
 
 ## What It Does
 

@@ -1,7 +1,7 @@
 <browserconfig>
   <msapplication>
     <tile>
-      <square150x150logo src="/linkedin-hide-viewed-jobs/icons/android-chrome-192x192.png" />
+      <square150x150logo src="/linkedin-hide-viewed-jobs/assets/icons/android-chrome-192x192.png" />
       <TileColor>#0b1220</TileColor>
     </tile>
   </msapplication>
