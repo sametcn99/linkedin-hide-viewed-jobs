@@ -147,8 +147,8 @@ function copyStaticFiles(distDir: string) {
 }
 
 function copyPopupFiles(distDir: string) {
-  writeFileSync(`${distDir}/popup.html`, readFileSync(`${ROOT}/src/popup/popup.html`, 'utf8'));
-  writeFileSync(`${distDir}/popup.css`, readFileSync(`${ROOT}/src/popup/popup.css`, 'utf8'));
+  writeFileSync(`${distDir}/popup.html`, readFileSync(`${ROOT}/src/extension/ui/popup/popup.html`, 'utf8'));
+  writeFileSync(`${distDir}/popup.css`, readFileSync(`${ROOT}/src/extension/ui/popup/popup.css`, 'utf8'));
 }
 
 async function buildForBrowser(browser: BrowserTarget): Promise<void> {
@@ -169,7 +169,7 @@ async function buildForBrowser(browser: BrowserTarget): Promise<void> {
   await buildEntry('src/extension/background.ts', 'background', distDir, 'iife');
 
   console.log(`  Building popup (IIFE)...`);
-  await buildEntry('src/popup/popup.ts', 'popup', distDir, 'iife');
+  await buildEntry('src/extension/ui/popup/popup.ts', 'popup', distDir, 'iife');
 
   console.log(`  Copying static files...`);
   copyStaticFiles(distDir);

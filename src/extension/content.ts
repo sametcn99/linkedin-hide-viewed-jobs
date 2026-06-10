@@ -1,5 +1,5 @@
-import { App } from '../core/App';
-import { ChromeStorageService } from '../storage/ChromeStorageService';
+import { App } from '../core';
+import { ChromeStorageService } from './storage/ChromeStorageService';
 
 const storage = new ChromeStorageService();
 

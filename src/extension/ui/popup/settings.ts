@@ -1,4 +1,4 @@
-import { STORAGE_KEYS, DEFAULTS } from './constants';
+import { STORAGE_KEYS, DEFAULTS } from '../../../core/constants/config';
 import type { PopupElements } from './types';
 
 export function saveSetting(key: string, value: string): void {
@@ -10,6 +10,35 @@ function syncColorSwatch(input: HTMLInputElement): void {
   if (swatch) {
     swatch.style.setProperty('--color', input.value);
   }
+}
+
+export function updateColorResetButtonVisibility(el: PopupElements): void {
+  if (!el.resetHighlightColorsBtn) return;
+  const dirty =
+    el.colorViewed.value.toLowerCase() !== DEFAULTS[STORAGE_KEYS.VIEWED_COLOR].toLowerCase() ||
+    el.colorApplied.value.toLowerCase() !== DEFAULTS[STORAGE_KEYS.APPLIED_COLOR].toLowerCase() ||
+    el.colorActive.value.toLowerCase() !== DEFAULTS[STORAGE_KEYS.ACTIVE_COLOR].toLowerCase() ||
+    el.colorKeyword.value.toLowerCase() !== DEFAULTS[STORAGE_KEYS.KEYWORD_COLOR].toLowerCase();
+  el.resetHighlightColorsBtn.hidden = !dirty;
+}
+
+export function resetHighlightColors(el: PopupElements): void {
+  el.colorViewed.value = DEFAULTS[STORAGE_KEYS.VIEWED_COLOR];
+  el.colorApplied.value = DEFAULTS[STORAGE_KEYS.APPLIED_COLOR];
+  el.colorActive.value = DEFAULTS[STORAGE_KEYS.ACTIVE_COLOR];
+  el.colorKeyword.value = DEFAULTS[STORAGE_KEYS.KEYWORD_COLOR];
+
+  syncColorSwatch(el.colorViewed);
+  syncColorSwatch(el.colorApplied);
+  syncColorSwatch(el.colorActive);
+  syncColorSwatch(el.colorKeyword);
+
+  saveSetting(STORAGE_KEYS.VIEWED_COLOR, el.colorViewed.value);
+  saveSetting(STORAGE_KEYS.APPLIED_COLOR, el.colorApplied.value);
+  saveSetting(STORAGE_KEYS.ACTIVE_COLOR, el.colorActive.value);
+  saveSetting(STORAGE_KEYS.KEYWORD_COLOR, el.colorKeyword.value);
+
+  updateColorResetButtonVisibility(el);
 }
 
 export function loadSettings(el: PopupElements): void {
@@ -60,6 +89,7 @@ export function loadSettings(el: PopupElements): void {
     el.opacityValue.textContent = opacity.toFixed(2);
 
     renderKeywordChips(el, customKeywords);
+    updateColorResetButtonVisibility(el);
   });
 }
 

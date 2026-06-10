@@ -1,17 +1,37 @@
-import { CONFIG, DOM_IDS } from '../constants';
-import { KeywordMatcher, DetectionService, RouterService } from '../services';
-import { StyleManager, Badge } from '../ui';
-import type { IStorageService } from '../storage';
+import { CONFIG, DOM_IDS } from './constants';
+import { KeywordMatcher, DetectionService, RouterService } from './services';
+import { StyleManager } from './ui/StyleManager';
+import type { IBadge } from '../userscript/ui/IBadge';
+import type { IStorageService } from './storage';
 import type {
   IHighlightColors,
   IHighlightSettings,
   TDetectedJobState,
   TDetectionMode,
   THighlightColorTarget,
-} from '../types';
+} from './types';
 
 export interface AppOptions {
   showBadge?: boolean;
+  /**
+   * Optional factory used by `App` to obtain a badge instance when `showBadge`
+   * is true. The userscript entry point provides a factory that returns a
+   * concrete `Badge`; the extension leaves this undefined because its UI
+   * lives in the popup instead.
+   */
+  createBadge?: (callbacks: BadgeCallbacks) => IBadge;
+}
+
+export interface BadgeCallbacks {
+  onToggle: (checked: boolean) => void;
+  onScrollGuardToggle: (enabled: boolean) => void;
+  onDetectionModeChange: (mode: TDetectionMode) => void;
+  onReloadNavigationToggle: (enabled: boolean) => void;
+  onHighlightColorChange: (target: THighlightColorTarget, color: string) => void;
+  onHighlightColorReset: (target: THighlightColorTarget) => void;
+  onHighlightOpacityChange: (value: number) => void;
+  onHighlightOpacityReset: () => void;
+  onCustomKeywordsChange: (keywords: string[]) => void;
 }
 
 /**
@@ -66,10 +86,9 @@ export class App {
     this.highlightColors = this.storage.getHighlightColors();
     this.highlightOpacity = this.storage.getHighlightOpacity();
 
-    if (this.showBadge) {
-      this.badge = new Badge(
-        this.storage,
-        (checked) => {
+    if (this.showBadge && options?.createBadge) {
+      this.badge = options.createBadge({
+        onToggle: (checked) => {
           this.showHidden = checked;
           this.storage.setShowHidden(checked);
           if (!checked) {
@@ -78,7 +97,7 @@ export class App {
           }
           this.scheduleRefresh();
         },
-        (enabled) => {
+        onScrollGuardToggle: (enabled) => {
           this.scrollGuardEnabled = enabled;
           this.storage.setScrollGuardEnabled(enabled);
           if (!enabled) {
@@ -87,31 +106,31 @@ export class App {
           }
           this.scheduleRefresh();
         },
-        (mode) => {
+        onDetectionModeChange: (mode) => {
           this.detectionMode = mode;
           this.storage.setDetectionMode(mode);
           this.scheduleRefresh();
         },
-        (enabled) => {
+        onReloadNavigationToggle: (enabled) => {
           this.reloadOnNavigationEnabled = enabled;
-          this.storage.setReloadOnNavigation(enabled);
+          this.storage.setReloadNavigation(enabled);
         },
-        (state, color) => {
+        onHighlightColorChange: (state, color) => {
           this.updateHighlightColor(state, color);
         },
-        (state) => {
+        onHighlightColorReset: (state) => {
           this.resetHighlightColor(state);
         },
-        (value) => {
+        onHighlightOpacityChange: (value) => {
           this.updateHighlightOpacity(value);
         },
-        () => {
+        onHighlightOpacityReset: () => {
           this.resetHighlightOpacity();
         },
-        (keywords) => {
+        onCustomKeywordsChange: (keywords) => {
           this.updateCustomKeywords(keywords);
-        }
-      );
+        },
+      });
     } else {
       this.badge = null;
     }

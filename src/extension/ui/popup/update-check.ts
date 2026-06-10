@@ -1,4 +1,4 @@
-import { DOM_IDS } from '../constants';
+import { DOM_IDS } from '../../../core/constants';
 
 const GITHUB_RELEASES_URL =
   'https://api.github.com/repos/sametcn99/linkedin-hide-viewed-jobs/releases/latest';

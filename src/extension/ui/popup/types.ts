@@ -19,6 +19,7 @@ export interface PopupElements {
   keywordChipInput: HTMLInputElement;
   opacitySlider: HTMLInputElement;
   opacityValue: HTMLElement;
+  resetHighlightColorsBtn: HTMLButtonElement | null;
   hiddenCountEl: HTMLElement;
   notOnJobsPageEl: HTMLElement;
   exportBtn: HTMLButtonElement | null;

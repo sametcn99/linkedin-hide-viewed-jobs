@@ -1,8 +1,13 @@
 import { $ } from './dom';
-import { STORAGE_KEYS } from './constants';
+import { STORAGE_KEYS } from '../../../core/constants/config';
 import type { PopupElements } from './types';
 import { fetchStats } from './stats';
-import { loadSettings, saveSetting } from './settings';
+import {
+  loadSettings,
+  resetHighlightColors,
+  saveSetting,
+  updateColorResetButtonVisibility,
+} from './settings';
 import { initKeywords } from './keywords';
 import { initImportExport } from './import-export';
 import { checkForUpdate } from './update-check';
@@ -41,6 +46,7 @@ function initPopup(): void {
   const checkUpdateBtn = $<HTMLButtonElement>('check-update-btn');
   const updateSummary = $<HTMLElement>('update-summary');
   const updateStatus = $<HTMLElement>('update-status');
+  const resetHighlightColorsBtn = $<HTMLButtonElement>('reset-highlight-colors-btn');
 
   if (
     !toggleShowHidden ||
@@ -89,10 +95,12 @@ function initPopup(): void {
     checkUpdateBtn,
     updateSummary,
     updateStatus,
+    resetHighlightColorsBtn,
   };
 
   initToggles(el);
   initColors(el);
+  initHighlightColorsReset(el);
   initOpacity(el);
   initKeywords(el);
   initImportExport(el);
@@ -142,21 +150,33 @@ function initColors(el: PopupElements): void {
   el.colorViewed.addEventListener('input', () => {
     syncColorSwatch(el.colorViewed);
     saveSetting(STORAGE_KEYS.VIEWED_COLOR, el.colorViewed.value);
+    updateColorResetButtonVisibility(el);
   });
 
   el.colorApplied.addEventListener('input', () => {
     syncColorSwatch(el.colorApplied);
     saveSetting(STORAGE_KEYS.APPLIED_COLOR, el.colorApplied.value);
+    updateColorResetButtonVisibility(el);
   });
 
   el.colorActive.addEventListener('input', () => {
     syncColorSwatch(el.colorActive);
     saveSetting(STORAGE_KEYS.ACTIVE_COLOR, el.colorActive.value);
+    updateColorResetButtonVisibility(el);
   });
 
   el.colorKeyword.addEventListener('input', () => {
     syncColorSwatch(el.colorKeyword);
     saveSetting(STORAGE_KEYS.KEYWORD_COLOR, el.colorKeyword.value);
+    updateColorResetButtonVisibility(el);
+  });
+}
+
+function initHighlightColorsReset(el: PopupElements): void {
+  if (!el.resetHighlightColorsBtn) return;
+  el.resetHighlightColorsBtn.setAttribute('data-tooltip', 'Reset to default colors');
+  el.resetHighlightColorsBtn.addEventListener('click', () => {
+    resetHighlightColors(el);
   });
 }
 

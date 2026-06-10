@@ -5,10 +5,11 @@ Thank you for your interest in contributing. This document is aimed at developer
 ## Table of Contents
 
 - [Development Setup](#development-setup)
+- [Project Layout](#project-layout)
 - [Architecture](#architecture)
   - [Userscript Mode](#userscript-mode)
   - [Extension Mode](#extension-mode)
-  - [Shared Code](#shared-code)
+  - [Core Logic](#core-logic)
 - [Detection Logic](#detection-logic)
 - [Customization](#customization)
 - [Build Commands](#build-commands)
@@ -31,6 +32,44 @@ cd linkedin-hide-viewed-jobs
 bun install
 ```
 
+## Project Layout
+
+```text
+src/
+  core/                 # Code shared by userscript and extension
+    types/               # Shared TypeScript interfaces
+    constants/           # Config, DOM_IDS, keywords, selectors
+    core/                # App orchestrator
+    services/            # DetectionService, KeywordMatcher, RouterService
+    ui/                  # StyleManager (CSS injection) only
+    storage/             # IStorageService interface only
+  userscript/            # Userscript-only code
+    main.ts              # Entry point
+    storage/             # LocalStorageService implementation
+    ui/                  # Badge (in-page draggable UI) + IBadge interface
+  extension/             # Browser extension-only code
+    content.ts           # Content script entry
+    background.ts        # Service worker
+    storage/             # ChromeStorageService implementation
+    ui/
+      popup/             # Popup UI (HTML, CSS, TS modules)
+scripts/                 # Build, package, and release automation
+icons/                   # Extension and PWA icons
+extension/               # Source manifest.json
+```
+
+### Dependency Injection for Badge
+
+`App` (in `src/core/`) needs the in-page badge to render its UI, but the concrete `Badge` class only exists in the userscript bundle. To keep `App` decoupled, `userscript/main.ts` injects the badge through a factory:
+
+```ts
+const app = new App(storage, {
+  createBadge: (callbacks) => new Badge(storage, callbacks.onToggle, ...),
+});
+```
+
+The extension entry point (`src/extension/content.ts`) calls `new App(storage, { showBadge: false })` instead, so the badge factory is never used and the Badge class is tree-shaken from the extension bundle.
+
 ## Architecture
 
 ### Userscript Mode
@@ -39,9 +78,9 @@ bun install
 main.ts → LocalStorageService → App → Badge / DetectionService / RouterService / StyleManager
 ```
 
-- **Entry:** `src/main.ts`
-- **Storage:** `window.localStorage` via `LocalStorageService`
-- **UI:** In-page draggable badge
+- **Entry:** `src/userscript/main.ts`
+- **Storage:** `window.localStorage` via `LocalStorageService` (`src/userscript/storage/LocalStorageService.ts`)
+- **UI:** In-page draggable badge (`src/userscript/ui/Badge.ts`)
 - **Bundle output:** `linkedin-hide-viewed-jobs.user.js` (single file, IIFE)
 
 ### Extension Mode
@@ -53,20 +92,21 @@ popup.ts ← chrome.storage.local → background.ts → chrome.storage.onChanged
 
 - **Entry (content):** `src/extension/content.ts` — injected into LinkedIn pages
 - **Entry (background):** `src/extension/background.ts` — service worker relaying storage changes
-- **Popup:** `src/popup/popup.html` + `popup.ts` + `popup.css` — settings UI in browser toolbar
-- **Storage:** `chrome.storage.local` via `ChromeStorageService`
+- **Popup:** `src/extension/ui/popup/` — settings UI in browser toolbar
+- **Storage:** `chrome.storage.local` via `ChromeStorageService` (`src/extension/storage/ChromeStorageService.ts`)
 - **Sync:** Popup changes → `chrome.storage.local` → background relays → content script calls `app.refreshSettings()`
 
-### Shared Code
+### Core Logic
 
-Both modes share the same core business logic:
+Both modes share the same core business logic under `src/core/`:
 
-- `src/core/App.ts` — orchestrator (accepts `IStorageService` via dependency injection)
-- `src/services/DetectionService.ts` — viewed/applied/keyword detection
-- `src/services/KeywordMatcher.ts` — multilingual keyword matching and custom keyword matching
-- `src/services/RouterService.ts` — SPA route change detection
-- `src/ui/Badge.ts` — in-page badge UI
-- `src/ui/StyleManager.ts` — CSS injection
+- `src/core/App.ts` — orchestrator (accepts `IStorageService` and an optional `createBadge` factory via dependency injection)
+- `src/core/services/DetectionService.ts` — viewed/applied/keyword detection
+- `src/core/services/KeywordMatcher.ts` — multilingual keyword matching and custom keyword matching
+- `src/core/services/RouterService.ts` — SPA route change detection
+- `src/core/ui/StyleManager.ts` — CSS injection
+- `src/core/storage/IStorageService.ts` — storage adapter interface
+- `src/userscript/ui/Badge.ts` — in-page badge UI (userscript-only, injected into `App` via `createBadge`)
 
 The storage adapter pattern (`IStorageService`) means `App` works identically whether backed by `localStorage` or `chrome.storage.local`.
 
@@ -83,9 +123,9 @@ Text matching uses `normalize('NFD')` plus diacritic removal for more stable mul
 
 ## Customization
 
-Source-of-truth customization lives under `src/**` and the userscript bundle is generated from that source.
+Source-of-truth customization lives under `src/core/constants/` and the userscript bundle is generated from that source.
 
-Common knobs (under `src/constants/`):
+Common knobs (under `src/core/constants/`):
 
 - `VIEWED_KEYWORDS` — add more viewed-language phrases
 - `APPLIED_KEYWORDS` — add more applied-language phrases

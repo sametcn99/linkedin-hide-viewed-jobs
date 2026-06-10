@@ -1,6 +1,6 @@
-import { STORAGE_KEYS } from './constants';
 import type { PopupElements } from './types';
 import { saveSetting, renderKeywordChips } from './settings';
+import { STORAGE_KEYS } from '../../../core/constants/config';
 
 export function initKeywords(el: PopupElements): void {
   const { keywordChipInput } = el;

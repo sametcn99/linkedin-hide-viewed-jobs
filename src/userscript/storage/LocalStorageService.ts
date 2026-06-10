@@ -1,6 +1,9 @@
-import type { IHighlightColors, IPosition, TDetectionMode } from '../types';
-import type { IStorageService } from './IStorageService';
-import { CONFIG, DOM_IDS } from '../constants';
+import type { TDetectionMode } from '../../core/types';
+import type { IPosition } from '../../core/interfaces/IPosition';
+
+import type { IStorageService } from '../../core/storage/IStorageService';
+import { CONFIG, DOM_IDS } from '../../core/constants';
+import { IHighlightColors } from '../../core/interfaces/IHighlightColors';
 
 /**
  * localStorage-backed storage adapter for userscript context.

@@ -1,6 +1,6 @@
-import { STORAGE_KEYS } from './constants';
 import type { PopupElements } from './types';
 import { loadSettings } from './settings';
+import { STORAGE_KEYS } from '../../../core/constants/config';
 
 export function initImportExport(el: PopupElements): void {
   const { exportBtn, importBtn, importFileInput, ioStatus } = el;

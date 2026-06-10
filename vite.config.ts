@@ -8,7 +8,7 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
 export default defineConfig({
   plugins: [
     monkey({
-      entry: 'src/main.ts',
+      entry: 'src/userscript/main.ts',
       userscript: {
         name: {
           '': 'LinkedIn Hide Viewed Jobs',

@@ -1,4 +1,6 @@
-import type { IHighlightColors, IPosition, TDetectionMode } from '../types';
+import { IHighlightColors } from '../interfaces/IHighlightColors';
+import { IPosition } from '../interfaces/IPosition';
+import type { TDetectionMode } from '../types';
 
 /**
  * Storage adapter interface abstracting localStorage and chrome.storage.local.
