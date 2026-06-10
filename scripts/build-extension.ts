@@ -75,7 +75,6 @@ function getChromeManifest(version: string) {
       },
     ],
     action: {
-      default_popup: 'popup.html',
       default_icon: {
         '16': 'icons/favicon-16x16.png',
         '32': 'icons/favicon-32x32.png',
@@ -110,7 +109,6 @@ function getFirefoxManifest(version: string) {
       },
     ],
     action: {
-      default_popup: 'popup.html',
       default_icon: {
         '16': 'icons/favicon-16x16.png',
         '32': 'icons/favicon-32x32.png',

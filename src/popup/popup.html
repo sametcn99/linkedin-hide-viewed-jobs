@@ -3,137 +3,191 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LinkedIn Hide Viewed Jobs</title>
+  <title>Hide Viewed Jobs</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div class="popup-container">
-    <header class="popup-header">
-      <h1>LinkedIn Hide Viewed Jobs</h1>
-      <button id="open-as-window-btn" class="open-window-btn" aria-label="Open in new window" title="Open as browser window">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-          <polyline points="15 3 21 3 21 9"/>
-          <line x1="10" y1="14" x2="21" y2="3"/>
-        </svg>
-      </button>
+  <div class="app">
+    <header class="app-header">
+      <div class="app-header-left">
+        <div class="app-logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+        <div class="app-title-block">
+          <h1 class="app-title">Hide Viewed Jobs</h1>
+          <span class="app-subtitle">LinkedIn productivity · <span id="version-display"></span></span>
+        </div>
+      </div>
+      <div class="app-header-right">
+        <div class="app-stat" id="stat-block">
+          <span id="hidden-count" class="app-stat-num">—</span>
+          <span class="app-stat-label">detected</span>
+        </div>
+        <a class="app-link" href="https://github.com/sametcn99/linkedin-hide-viewed-jobs" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.87-1.54-3.87-1.54-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.73-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.11 3.04.73.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.4-5.25 5.68.41.36.78 1.06.78 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.68.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/></svg>
+        </a>
+      </div>
     </header>
 
-    <div class="popup-content">
-    <section class="popup-section counter-section">
-      <div class="counter-row">
-        <span class="counter-label">Detected Jobs</span>
-        <span id="hidden-count" class="counter-value">-</span>
+    <main class="app-main">
+      <div id="cooldown-row" class="banner banner-warn" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Scroll Guard cooldown</span>
+        <span id="cooldown-value" class="banner-meta">0s</span>
       </div>
-      <div id="cooldown-row" class="cooldown-row" style="display: none;">
-        <span class="cooldown-label">Scroll Guard Cooldown</span>
-        <span id="cooldown-value" class="cooldown-value">0s</span>
-      </div>
-      <p id="not-on-jobs-page" class="not-on-jobs-page" style="display: none;">
-        Open a LinkedIn Jobs page to see stats
+
+      <p id="not-on-jobs-page" class="banner banner-info" hidden>
+        Open a LinkedIn Jobs page to see live stats
       </p>
-    </section>
 
-    <section class="popup-section">
-      <label class="toggle-row">
-        <span class="toggle-label">ON/OFF</span>
-        <button id="toggle-show-hidden" class="toggle-switch" aria-label="Toggle extension on or off" role="switch" aria-checked="true">
-          <span class="toggle-thumb"></span>
-        </button>
-      </label>
-
-      <label class="toggle-row">
-        <span class="toggle-label">Scroll Guard</span>
-        <button id="toggle-scroll-guard" class="toggle-switch" aria-label="Toggle scroll guard" role="switch" aria-checked="true">
-          <span class="toggle-thumb"></span>
-        </button>
-      </label>
-
-      <label class="toggle-row">
-        <span class="toggle-label">Reload on Navigation</span>
-        <button id="toggle-reload-navigation" class="toggle-switch" aria-label="Toggle reload on navigation" role="switch" aria-checked="false">
-          <span class="toggle-thumb"></span>
-        </button>
-      </label>
-    </section>
-
-    <section class="popup-section">
-      <div class="keyword-row">
-        <span class="keyword-label">Custom Keywords</span>
-        <div id="keyword-chip-container" class="keyword-chip-container"></div>
-        <input type="text" id="keyword-chip-input" class="keyword-chip-input" placeholder="Type keyword and press Enter" aria-label="Add custom keyword" />
-        <span id="keyword-duplicate-msg" class="keyword-duplicate-msg">Already added</span>
-      </div>
-    </section>
-
-    <section class="popup-section">
-      <h2 class="section-title">Detection Mode</h2>
-      <div class="radio-group">
-        <label class="radio-row">
-          <input type="radio" name="detection-mode" value="hide" id="mode-hide" />
-          <span class="radio-label">Hide</span>
-        </label>
-        <label class="radio-row">
-          <input type="radio" name="detection-mode" value="highlight" id="mode-highlight" />
-          <span class="radio-label">Highlight</span>
-        </label>
-      </div>
-    </section>
-
-    <section class="popup-section" id="highlight-settings">
-      <h2 class="section-title">Highlight Settings</h2>
-
-      <label class="color-row">
-        <span class="color-label">Viewed Color</span>
-        <div class="color-input-group">
-          <input type="color" id="color-viewed" class="color-input" />
-          <button class="reset-btn" data-target="viewed" aria-label="Reset viewed color">↺</button>
-        </div>
-      </label>
-
-      <label class="color-row">
-        <span class="color-label">Applied Color</span>
-        <div class="color-input-group">
-          <input type="color" id="color-applied" class="color-input" />
-          <button class="reset-btn" data-target="applied" aria-label="Reset applied color">↺</button>
-        </div>
-      </label>
-
-      <label class="color-row">
-        <span class="color-label">Active Color</span>
-        <div class="color-input-group">
-          <input type="color" id="color-active" class="color-input" />
-          <button class="reset-btn" data-target="active" aria-label="Reset active color">↺</button>
-        </div>
-      </label>
-
-      <label class="color-row">
-        <span class="color-label">Keyword Color</span>
-        <div class="color-input-group">
-          <input type="color" id="color-keyword" class="color-input" />
-          <button class="reset-btn" data-target="keyword" aria-label="Reset keyword color">↺</button>
-        </div>
-      </label>
-
-      <div class="opacity-row">
-        <label class="opacity-label" for="opacity-slider">Opacity</label>
-        <div class="slider-group">
-          <input type="range" id="opacity-slider" class="slider" min="0.04" max="0.28" step="0.01" />
-          <span id="opacity-value" class="opacity-value">0.10</span>
-          <button class="reset-btn" data-target="opacity" aria-label="Reset opacity">↺</button>
-        </div>
-      </div>
-    </section>
-    </div>
-
-    <footer class="popup-footer">
-      <a href="https://github.com/sametcn99/linkedin-hide-viewed-jobs" target="_blank" rel="noopener noreferrer" class="footer-link">
-        GitHub
+      <a id="update-banner" class="banner banner-update" hidden target="_blank" rel="noopener noreferrer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.39 0 4.59.94 6.21 2.45"/><polyline points="21 3 21 9 15 9"/></svg>
+        <span>Update available</span>
+        <span id="update-version" class="banner-meta">v—</span>
       </a>
-      <span class="footer-version" id="version-display"></span>
-    </footer>
-  </div>
 
+      <section class="panel">
+        <div class="setting-list">
+          <label class="setting" for="toggle-show-hidden">
+            <div class="setting-text">
+              <span class="setting-title">Enabled</span>
+              <span class="setting-hint">Master switch for the extension</span>
+            </div>
+            <button id="toggle-show-hidden" class="toggle" type="button" role="switch" aria-checked="true">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </button>
+          </label>
+
+          <label class="setting" for="toggle-scroll-guard">
+            <div class="setting-text">
+              <span class="setting-title">Scroll Guard</span>
+              <span class="setting-hint">Slows down rapid scrolling through viewed jobs</span>
+            </div>
+            <button id="toggle-scroll-guard" class="toggle" type="button" role="switch" aria-checked="true">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </button>
+          </label>
+
+          <label class="setting" for="toggle-reload-navigation">
+            <div class="setting-text">
+              <span class="setting-title">Reload on Navigation</span>
+              <span class="setting-hint">Re-scan the page after LinkedIn route changes</span>
+            </div>
+            <button id="toggle-reload-navigation" class="toggle" type="button" role="switch" aria-checked="false">
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            </button>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Detection Mode</h2>
+        </div>
+        <div class="segmented" role="radiogroup" aria-label="Detection mode">
+          <input type="radio" name="detection-mode" id="mode-hide" value="hide" checked />
+          <label for="mode-hide" class="segment">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            <span>Hide</span>
+          </label>
+          <input type="radio" name="detection-mode" id="mode-highlight" value="highlight" />
+          <label for="mode-highlight" class="segment">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+            <span>Highlight</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel" id="highlight-settings">
+        <div class="panel-head">
+          <h2 class="panel-title">Highlight Colors</h2>
+          <span class="panel-sub">Color and opacity used for cards</span>
+        </div>
+        <ul class="color-list">
+          <li class="color-row">
+            <label class="color-label" for="color-viewed">
+              <span class="color-swatch" data-color="#2ecc71"><input type="color" id="color-viewed" value="#2ecc71" /></span>
+              <span class="color-text">Viewed</span>
+            </label>
+          </li>
+          <li class="color-row">
+            <label class="color-label" for="color-applied">
+              <span class="color-swatch" data-color="#f59e0b"><input type="color" id="color-applied" value="#f59e0b" /></span>
+              <span class="color-text">Applied</span>
+            </label>
+          </li>
+          <li class="color-row">
+            <label class="color-label" for="color-active">
+              <span class="color-swatch" data-color="#0a66c2"><input type="color" id="color-active" value="#0a66c2" /></span>
+              <span class="color-text">Active</span>
+            </label>
+          </li>
+          <li class="color-row">
+            <label class="color-label" for="color-keyword">
+              <span class="color-swatch" data-color="#9b59b6"><input type="color" id="color-keyword" value="#9b59b6" /></span>
+              <span class="color-text">Keyword</span>
+            </label>
+          </li>
+        </ul>
+        <div class="slider-block">
+          <div class="slider-head">
+            <span class="slider-title">Opacity</span>
+            <span id="opacity-value" class="slider-meta">0.10</span>
+          </div>
+          <input type="range" id="opacity-slider" class="range" min="0" max="1" step="0.01" value="0.10" />
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Custom Keywords</h2>
+          <span class="panel-sub">Bonus signals on top of built-in keywords</span>
+        </div>
+        <div id="keyword-chip-container" class="chips"></div>
+        <label class="input-wrap" for="keyword-chip-input">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <input type="text" id="keyword-chip-input" class="input" placeholder="Add keyword and press Enter" />
+        </label>
+        <span id="keyword-duplicate-msg" class="hint hint-warn">Already added</span>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Data</h2>
+          <span class="panel-sub">Backup or restore your settings</span>
+        </div>
+        <div class="button-row">
+          <button id="export-settings-btn" type="button" class="btn btn-ghost">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          <button id="import-settings-btn" type="button" class="btn btn-ghost">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import
+          </button>
+        </div>
+        <input type="file" id="import-file-input" accept=".json" hidden />
+        <div id="io-status" class="status" aria-live="polite"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Updates</h2>
+          <span class="panel-sub" id="update-summary">Check for new releases</span>
+        </div>
+        <div class="button-row">
+          <button id="check-update-btn" type="button" class="btn btn-ghost">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.39 0 4.59.94 6.21 2.45"/><polyline points="21 3 21 9 15 9"/></svg>
+            Check for updates
+          </button>
+        </div>
+        <div id="update-status" class="status" aria-live="polite"></div>
+      </section>
+    </main>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>

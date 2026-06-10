@@ -126,6 +126,8 @@ export interface IDomIdentifiers {
   readonly CUSTOM_KEYWORDS_STORAGE_KEY: string;
   readonly HIGHLIGHT_OPACITY_STORAGE_KEY: string;
   readonly UI_POSITION_KEY: string;
+  readonly POPUP_BOUNDS_STORAGE_KEY: string;
+  readonly UPDATE_CHECK_STORAGE_KEY: string;
   readonly HIDDEN_CLASS: string;
   readonly UI_ID: string;
   readonly VIEWED_HIGHLIGHT_CLASS: string;
