@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && bun run scripts/copy-userscript.ts",
     "build:extension": "bun run scripts/build-extension.ts",
     "build:all": "bun run build && bun run build:extension",
     "package:chrome": "bun run scripts/package-extension.ts chrome",
@@ -15,7 +15,7 @@
     "preview": "vite preview",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "format": "prettier --write \"src/**/*.{ts,js}\" \"**/*.md\"",
+    "format": "prettier --write \"**/*.{ts,js}\" \"**/*.md\"",
     "check": "bun run lint:fix && bun run format"
   },
   "repository": {

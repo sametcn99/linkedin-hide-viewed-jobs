@@ -1,12 +1,12 @@
-import { build } from 'vite';
-import { resolve } from 'path';
-import { cpSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'fs';
+import { build } from 'vite'
+import { resolve } from 'path'
+import { cpSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'fs'
 
-const ROOT = import.meta.dir.replace(/[\\/]scripts$/, '').replace(/\\/g, '/');
+const ROOT = import.meta.dir.replace(/[\\/]scripts$/, '').replace(/\\/g, '/')
 
-type BrowserTarget = 'chrome' | 'firefox';
+type BrowserTarget = 'chrome' | 'firefox'
 
-const DIST_ROOT = `${ROOT}/dist/extension`;
+const DIST_ROOT = `${ROOT}/dist/extension`
 
 const ICON_FILES = [
   'favicon-16x16.png',
@@ -15,22 +15,24 @@ const ICON_FILES = [
   'android-chrome-192x192.png',
   'android-chrome-512x512.png',
   'apple-touch-icon.png',
-  'site.webmanifest',
-];
+  'site.webmanifest'
+]
 
 function deleteRecursive(path: string) {
   try {
-    rmSync(path, { recursive: true, force: true });
-  } catch {}
+    rmSync(path, { recursive: true, force: true })
+  } catch (err) {
+    console.warn(`  Warning: Failed to delete ${path}:`, err)
+  }
 }
 
 async function buildEntry(
   entry: string,
   outName: string,
   outDir: string,
-  format: 'iife' | 'es' = 'iife',
+  format: 'iife' | 'es' = 'iife'
 ) {
-  const entryPath = resolve(ROOT, entry).replace(/\\/g, '/');
+  const entryPath = resolve(ROOT, entry).replace(/\\/g, '/')
   await build({
     root: ROOT,
     configFile: false,
@@ -45,17 +47,17 @@ async function buildEntry(
         compress: {
           passes: 3,
           drop_console: true,
-          pure_funcs: ['console.debug', 'console.info', 'console.log', 'console.warn'],
-        },
+          pure_funcs: ['console.debug', 'console.info', 'console.log', 'console.warn']
+        }
       },
       lib: {
         entry: entryPath,
         name: 'LHVJ',
         formats: [format === 'iife' ? 'iife' : 'es'],
-        fileName: () => `${outName}.js`,
-      },
-    },
-  });
+        fileName: () => `${outName}.js`
+      }
+    }
+  })
 }
 
 function getChromeManifest(version: string) {
@@ -71,25 +73,25 @@ function getChromeManifest(version: string) {
       {
         matches: ['https://www.linkedin.com/*'],
         js: ['content.js'],
-        run_at: 'document_idle',
-      },
+        run_at: 'document_idle'
+      }
     ],
     action: {
       default_icon: {
         '16': 'icons/favicon-16x16.png',
-        '32': 'icons/favicon-32x32.png',
-      },
+        '32': 'icons/favicon-32x32.png'
+      }
     },
     background: {
-      service_worker: 'background.js',
+      service_worker: 'background.js'
     },
     icons: {
       '16': 'icons/favicon-16x16.png',
       '32': 'icons/favicon-32x32.png',
       '192': 'icons/android-chrome-192x192.png',
-      '512': 'icons/android-chrome-512x512.png',
-    },
-  };
+      '512': 'icons/android-chrome-512x512.png'
+    }
+  }
 }
 
 function getFirefoxManifest(version: string) {
@@ -105,106 +107,113 @@ function getFirefoxManifest(version: string) {
       {
         matches: ['https://www.linkedin.com/*'],
         js: ['content.js'],
-        run_at: 'document_idle',
-      },
+        run_at: 'document_idle'
+      }
     ],
     action: {
       default_icon: {
         '16': 'icons/favicon-16x16.png',
-        '32': 'icons/favicon-32x32.png',
-      },
+        '32': 'icons/favicon-32x32.png'
+      }
     },
     background: {
-      scripts: ['background.js'],
+      scripts: ['background.js']
     },
     icons: {
       '16': 'icons/favicon-16x16.png',
       '32': 'icons/favicon-32x32.png',
       '192': 'icons/android-chrome-192x192.png',
-      '512': 'icons/android-chrome-512x512.png',
+      '512': 'icons/android-chrome-512x512.png'
     },
     browser_specific_settings: {
       gecko: {
         id: 'linkedin-hide-viewed-jobs@sametcn99',
-        strict_min_version: '109.0',
-      },
-    },
-  };
+        strict_min_version: '109.0'
+      }
+    }
+  }
 }
 
 function copyStaticFiles(distDir: string) {
-  const iconsSrc = `${ROOT}/icons`;
-  const iconsDest = `${distDir}/icons`;
-  mkdirSync(iconsDest, { recursive: true });
+  const iconsSrc = `${ROOT}/icons`
+  const iconsDest = `${distDir}/icons`
+  mkdirSync(iconsDest, { recursive: true })
 
   for (const icon of ICON_FILES) {
-    const srcPath = resolve(iconsSrc, icon);
-    const destPath = resolve(iconsDest, icon);
+    const srcPath = resolve(iconsSrc, icon)
+    const destPath = resolve(iconsDest, icon)
     try {
-      cpSync(srcPath, destPath, { force: true });
-    } catch {}
+      cpSync(srcPath, destPath, { force: true })
+    } catch (err) {
+      console.warn(`  Warning: Failed to copy ${icon}:`, err)
+    }
   }
 }
 
 function copyPopupFiles(distDir: string) {
-  writeFileSync(`${distDir}/popup.html`, readFileSync(`${ROOT}/src/extension/ui/popup/popup.html`, 'utf8'));
-  writeFileSync(`${distDir}/popup.css`, readFileSync(`${ROOT}/src/extension/ui/popup/popup.css`, 'utf8'));
+  writeFileSync(
+    `${distDir}/popup.html`,
+    readFileSync(`${ROOT}/src/extension/ui/popup/popup.html`, 'utf8')
+  )
+  writeFileSync(
+    `${distDir}/popup.css`,
+    readFileSync(`${ROOT}/src/extension/ui/popup/popup.css`, 'utf8')
+  )
 }
 
 async function buildForBrowser(browser: BrowserTarget): Promise<void> {
-  const distDir = `${DIST_ROOT}-${browser}`;
-  const packageJson = JSON.parse(readFileSync(`${ROOT}/package.json`, 'utf8'));
-  const version = packageJson.version as string;
+  const distDir = `${DIST_ROOT}-${browser}`
+  const packageJson = JSON.parse(readFileSync(`${ROOT}/package.json`, 'utf8'))
+  const version = packageJson.version as string
 
-  console.log(`\nBuilding ${browser.toUpperCase()} extension (v${version})...`);
+  console.log(`\nBuilding ${browser.toUpperCase()} extension (v${version})...`)
 
-  deleteRecursive(distDir);
-  mkdirSync(distDir, { recursive: true });
-  mkdirSync(`${distDir}/icons`, { recursive: true });
+  deleteRecursive(distDir)
+  mkdirSync(distDir, { recursive: true })
+  mkdirSync(`${distDir}/icons`, { recursive: true })
 
-  console.log(`  Building content script (IIFE)...`);
-  await buildEntry('src/extension/content.ts', 'content', distDir, 'iife');
+  console.log(`  Building content script (IIFE)...`)
+  await buildEntry('src/extension/content.ts', 'content', distDir, 'iife')
 
-  console.log(`  Building background script (IIFE)...`);
-  await buildEntry('src/extension/background.ts', 'background', distDir, 'iife');
+  console.log(`  Building background script (IIFE)...`)
+  await buildEntry('src/extension/background.ts', 'background', distDir, 'iife')
 
-  console.log(`  Building popup (IIFE)...`);
-  await buildEntry('src/extension/ui/popup/popup.ts', 'popup', distDir, 'iife');
+  console.log(`  Building popup (IIFE)...`)
+  await buildEntry('src/extension/ui/popup/popup.ts', 'popup', distDir, 'iife')
 
-  console.log(`  Copying static files...`);
-  copyStaticFiles(distDir);
-  copyPopupFiles(distDir);
+  console.log(`  Copying static files...`)
+  copyStaticFiles(distDir)
+  copyPopupFiles(distDir)
 
-  const manifest =
-    browser === 'chrome' ? getChromeManifest(version) : getFirefoxManifest(version);
-  writeFileSync(`${distDir}/manifest.json`, JSON.stringify(manifest, null, 2));
+  const manifest = browser === 'chrome' ? getChromeManifest(version) : getFirefoxManifest(version)
+  writeFileSync(`${distDir}/manifest.json`, JSON.stringify(manifest, null, 2))
 
-  console.log(`  ${browser.toUpperCase()} extension built → ${distDir}`);
+  console.log(`  ${browser.toUpperCase()} extension built → ${distDir}`)
 }
 
 async function main() {
-  const packageJson = JSON.parse(readFileSync(`${ROOT}/package.json`, 'utf8'));
-  const version = packageJson.version as string;
+  const packageJson = JSON.parse(readFileSync(`${ROOT}/package.json`, 'utf8'))
+  const version = packageJson.version as string
 
-  const staleDist = `${ROOT}/dist/extension`;
+  const staleDist = `${ROOT}/dist/extension`
   if (existsSync(staleDist)) {
-    console.log('Cleaning stale dist/extension/ directory...');
-    deleteRecursive(staleDist);
+    console.log('Cleaning stale dist/extension/ directory...')
+    deleteRecursive(staleDist)
   }
 
-  console.log(`LinkedIn Hide Viewed Jobs v${version} — Extension Build`);
-  console.log('='.repeat(50));
+  console.log(`LinkedIn Hide Viewed Jobs v${version} — Extension Build`)
+  console.log('='.repeat(50))
 
-  await buildForBrowser('chrome');
-  await buildForBrowser('firefox');
+  await buildForBrowser('chrome')
+  await buildForBrowser('firefox')
 
-  console.log('\n' + '='.repeat(50));
-  console.log('All extension builds complete!');
-  console.log(`  Chrome:  dist/extension-chrome/`);
-  console.log(`  Firefox: dist/extension-firefox/`);
+  console.log('\n' + '='.repeat(50))
+  console.log('All extension builds complete!')
+  console.log(`  Chrome:  dist/extension-chrome/`)
+  console.log(`  Firefox: dist/extension-firefox/`)
 }
 
 main().catch((err) => {
-  console.error('Build failed:', err);
-  process.exit(1);
-});
+  console.error('Build failed:', err)
+  process.exit(1)
+})

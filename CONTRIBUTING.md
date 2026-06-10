@@ -55,8 +55,8 @@ src/
       popup/             # Popup UI (HTML, CSS, TS modules)
 scripts/                 # Build, package, and release automation
 icons/                   # Extension and PWA icons
-extension/               # Source manifest.json
 ```
+The browser extension's `manifest.json` is generated at build time in `scripts/build-extension.ts` (see `getChromeManifest` / `getFirefoxManifest`); no source manifest is committed.
 
 ### Dependency Injection for Badge
 

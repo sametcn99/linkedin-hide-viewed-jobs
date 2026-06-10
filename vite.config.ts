@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite';
-import monkey from 'vite-plugin-monkey';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { defineConfig } from 'vite'
+import monkey from 'vite-plugin-monkey'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
-const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
 
 export default defineConfig({
   plugins: [
@@ -22,7 +22,7 @@ export default defineConfig({
           ja: 'LinkedIn 閲覧済み求人を非表示',
           ko: 'LinkedIn 확인한 채용 공고 숨기기',
           'zh-CN': 'LinkedIn 隐藏已查看职位',
-          ar: 'لينكدإن إخفاء الوظائف التي تمت مشاهدتها',
+          ar: 'لينكدإن إخفاء الوظائف التي تمت مشاهدتها'
         },
         namespace: 'https://github.com/sametcn99',
         version: pkg.version,
@@ -39,7 +39,7 @@ export default defineConfig({
           ko: 'LinkedIn Jobs 페이지에서 확인한 채용 카드들을 숨기고, 작고 드래그 가능한 배지를 추가하며, 숨긴 항목을 언제든 다시 표시할 수 있습니다.',
           'zh-CN':
             '在 LinkedIn 职位页面隐藏已查看职位卡片，添加可拖动的紧凑徽章，并可随时重新显示已隐藏项目。',
-          ar: 'يخفي بطاقات الوظائف التي تمت مشاهدتها في صفحات وظائف لينكدإن، ويضيف شارة مدمجة قابلة للسحب، ويتيح لك إظهار العناصر المخفية في أي وقت.',
+          ar: 'يخفي بطاقات الوظائف التي تمت مشاهدتها في صفحات وظائف لينكدإن، ويضيف شارة مدمجة قابلة للسحب، ويتيح لك إظهار العناصر المخفية في أي وقت.'
         },
         source: 'https://github.com/sametcn99/linkedin-hide-viewed-jobs',
         website: 'https://github.com/sametcn99/linkedin-hide-viewed-jobs',
@@ -64,16 +64,16 @@ export default defineConfig({
         $extra: [
           ['compatible', ['chrome Violentmonkey/Tampermonkey']],
           ['compatible', ['edge Violentmonkey/Tampermonkey']],
-          ['compatible', ['firefox Violentmonkey/Tampermonkey']],
-        ],
+          ['compatible', ['firefox Violentmonkey/Tampermonkey']]
+        ]
       },
       build: {
-        fileName: 'linkedin-hide-viewed-jobs.user.js',
-      },
-    }),
+        fileName: 'linkedin-hide-viewed-jobs.user.js'
+      }
+    })
   ],
   build: {
-    outDir: '.',
+    outDir: 'dist/userscript',
     emptyOutDir: false,
     target: 'esnext',
     minify: 'terser',
@@ -83,7 +83,7 @@ export default defineConfig({
       module: true,
       parse: {
         html5_comments: false,
-        shebang: false,
+        shebang: false
       },
       compress: {
         arrows: true,
@@ -123,23 +123,23 @@ export default defineConfig({
         unsafe_methods: true,
         unsafe_symbols: true,
         unsafe_undefined: true,
-        unused: true,
+        unused: true
       },
       mangle: {
         eval: true,
         module: true,
         properties: {
           regex:
-            /^(?:showHidden|scrollGuardEnabled|detectionMode|reloadOnNavigationEnabled|highlightColors|highlightOpacity|hiddenCount|rafId|isRuntimeActive|isReloadingForPathChange|lastRouteChangeAt|isCooldownActive|cooldownUntil|lastControlledScrollAt|touchLastY|lastObservedScrollY|lastObservedScrollAt|isAdjustingNativeScroll|countGrowthSinceCooldown|isDragging|styleEl|normalizedViewedKeywords|normalizedAppliedKeywords|lastUrl|lastPathname|routeRefreshBurstId|domObserver|domMutationTimerId|delayedRefreshTimers)$/,
+            /^(?:showHidden|scrollGuardEnabled|detectionMode|reloadOnNavigationEnabled|highlightColors|highlightOpacity|hiddenCount|rafId|isRuntimeActive|isReloadingForPathChange|lastRouteChangeAt|isCooldownActive|cooldownUntil|lastControlledScrollAt|touchLastY|lastObservedScrollY|lastObservedScrollAt|isAdjustingNativeScroll|countGrowthSinceCooldown|isDragging|styleEl|normalizedViewedKeywords|normalizedAppliedKeywords|lastUrl|lastPathname|routeRefreshBurstId|domObserver|domMutationTimerId|delayedRefreshTimers)$/
         },
-        toplevel: true,
+        toplevel: true
       },
       format: {
         ascii_only: true,
         comments: false,
         semicolons: false,
-        wrap_iife: true,
-      },
-    },
-  },
-});
+        wrap_iife: true
+      }
+    }
+  }
+})
