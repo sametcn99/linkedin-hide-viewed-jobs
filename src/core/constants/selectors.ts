@@ -14,8 +14,8 @@ export const JOB_CARD_SELECTORS: readonly string[] = Object.freeze([
   'li.jobs-collection__list-item',
   'div.jobs-collection__list-item',
   '.jobs-collections-module__job-card',
-  '.jobs-collections-module__job-card-container',
-]);
+  '.jobs-collections-module__job-card-container'
+])
 
 export const VIEWED_MARKER_SELECTORS: readonly string[] = Object.freeze([
   'li.job-card-container__footer-job-state',
@@ -25,8 +25,8 @@ export const VIEWED_MARKER_SELECTORS: readonly string[] = Object.freeze([
   '[class*="job-state"]',
   '[data-jobstate]',
   '[data-viewed="true"]',
-  'span.job-card-list__footer',
-]);
+  'span.job-card-list__footer'
+])
 
 export const POTENTIAL_VIEWED_ANCHOR_SELECTORS: readonly string[] = Object.freeze([
   'a[href*="/jobs/view/"]',
@@ -39,13 +39,13 @@ export const POTENTIAL_VIEWED_ANCHOR_SELECTORS: readonly string[] = Object.freez
   'a[class*="job-card"]',
   'a.base-card__full-link',
   'a.jobs-collection-card__link',
-  'a.jobs-collections-module__link',
-]);
+  'a.jobs-collections-module__link'
+])
 
 /** Pre-joined selector strings to avoid re-joining on every call */
-export const CARD_SELECTOR_JOINED = JOB_CARD_SELECTORS.join(',');
-export const MARKER_SELECTOR_JOINED = VIEWED_MARKER_SELECTORS.join(',');
-export const ANCHOR_SELECTOR_JOINED = POTENTIAL_VIEWED_ANCHOR_SELECTORS.join(',');
+export const CARD_SELECTOR_JOINED = JOB_CARD_SELECTORS.join(',')
+export const MARKER_SELECTOR_JOINED = VIEWED_MARKER_SELECTORS.join(',')
+export const ANCHOR_SELECTOR_JOINED = POTENTIAL_VIEWED_ANCHOR_SELECTORS.join(',')
 
 /** Extended card selector for fallback matching */
 export const EXTENDED_CARD_SELECTOR = [
@@ -63,5 +63,5 @@ export const EXTENDED_CARD_SELECTOR = [
   '.jobs-collections-module__job-card',
   '.jobs-collections-module__job-card-container',
   'li.jobs-collections-module__list-item',
-  'div.jobs-collections-module__list-item',
-].join(',');
+  'div.jobs-collections-module__list-item'
+].join(',')

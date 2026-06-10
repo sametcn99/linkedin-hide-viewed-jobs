@@ -1,1 +1,1 @@
-export { StyleManager } from './StyleManager';
+export { StyleManager } from './StyleManager'

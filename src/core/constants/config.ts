@@ -1,4 +1,4 @@
-import type { IConfig, IDomIdentifiers } from '../types';
+import type { IConfig, IDomIdentifiers } from '../types'
 
 export const CONFIG: IConfig = Object.freeze({
   POLL_INTERVAL_MS: 2000,
@@ -27,8 +27,8 @@ export const CONFIG: IConfig = Object.freeze({
   SCROLL_GUARD_ALLOWED_STEP_PX: 110,
   SCROLL_GUARD_ALLOWED_STEP_MIN_INTERVAL_MS: 120,
   SCROLL_GUARD_MIN_VIEWED_DENSITY: 0.55,
-  SCROLL_GUARD_DENSITY_WINDOW_MS: 6000,
-});
+  SCROLL_GUARD_DENSITY_WINDOW_MS: 6000
+})
 
 export const DOM_IDS: IDomIdentifiers = Object.freeze({
   STORAGE_KEY: 'lhvj-show-hidden',
@@ -49,8 +49,8 @@ export const DOM_IDS: IDomIdentifiers = Object.freeze({
   VIEWED_HIGHLIGHT_CLASS: 'lhvj-viewed-highlight',
   APPLIED_HIGHLIGHT_CLASS: 'lhvj-applied-highlight',
   ACTIVE_HIGHLIGHT_CLASS: 'lhvj-active-highlight',
-  KEYWORD_HIGHLIGHT_CLASS: 'lhvj-keyword-highlight',
-});
+  KEYWORD_HIGHLIGHT_CLASS: 'lhvj-keyword-highlight'
+})
 
 export const STORAGE_KEYS = {
   SHOW_HIDDEN: DOM_IDS.STORAGE_KEY,
@@ -62,13 +62,13 @@ export const STORAGE_KEYS = {
   ACTIVE_COLOR: DOM_IDS.ACTIVE_HIGHLIGHT_COLOR_STORAGE_KEY,
   KEYWORD_COLOR: DOM_IDS.KEYWORD_HIGHLIGHT_COLOR_STORAGE_KEY,
   CUSTOM_KEYWORDS: DOM_IDS.CUSTOM_KEYWORDS_STORAGE_KEY,
-  OPACITY: DOM_IDS.HIGHLIGHT_OPACITY_STORAGE_KEY,
-} as const;
+  OPACITY: DOM_IDS.HIGHLIGHT_OPACITY_STORAGE_KEY
+} as const
 
 export const DEFAULTS: Record<string, string> = {
   [STORAGE_KEYS.VIEWED_COLOR]: '#2ecc71',
   [STORAGE_KEYS.APPLIED_COLOR]: '#f59e0b',
   [STORAGE_KEYS.ACTIVE_COLOR]: '#0a66c2',
   [STORAGE_KEYS.KEYWORD_COLOR]: '#9b59b6',
-  [STORAGE_KEYS.OPACITY]: '0.10',
-} as const;
+  [STORAGE_KEYS.OPACITY]: '0.10'
+} as const

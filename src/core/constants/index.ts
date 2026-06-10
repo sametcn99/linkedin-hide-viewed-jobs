@@ -1,5 +1,5 @@
-export { CONFIG, DOM_IDS } from './config';
-export { VIEWED_KEYWORDS, APPLIED_KEYWORDS } from './keywords';
+export { CONFIG, DOM_IDS } from './config'
+export { VIEWED_KEYWORDS, APPLIED_KEYWORDS } from './keywords'
 export {
   JOB_CARD_SELECTORS,
   VIEWED_MARKER_SELECTORS,
@@ -7,5 +7,5 @@ export {
   CARD_SELECTOR_JOINED,
   MARKER_SELECTOR_JOINED,
   ANCHOR_SELECTOR_JOINED,
-  EXTENDED_CARD_SELECTOR,
-} from './selectors';
+  EXTENDED_CARD_SELECTOR
+} from './selectors'

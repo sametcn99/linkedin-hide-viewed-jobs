@@ -1,171 +1,171 @@
-import { CONFIG, DOM_IDS } from './constants';
-import { KeywordMatcher, DetectionService, RouterService } from './services';
-import { StyleManager } from './ui/StyleManager';
-import type { IBadge } from '../userscript/ui/IBadge';
-import type { IStorageService } from './storage';
+import { CONFIG, DOM_IDS } from './constants'
+import { KeywordMatcher, DetectionService, RouterService } from './services'
+import { StyleManager } from './ui/StyleManager'
+import type { IBadge } from '../userscript/ui/IBadge'
+import type { IStorageService } from './storage'
 import type {
   IHighlightColors,
   IHighlightSettings,
   TDetectedJobState,
   TDetectionMode,
-  THighlightColorTarget,
-} from './types';
+  THighlightColorTarget
+} from './types'
 
 export interface AppOptions {
-  showBadge?: boolean;
+  showBadge?: boolean
   /**
    * Optional factory used by `App` to obtain a badge instance when `showBadge`
    * is true. The userscript entry point provides a factory that returns a
    * concrete `Badge`; the extension leaves this undefined because its UI
    * lives in the popup instead.
    */
-  createBadge?: (callbacks: BadgeCallbacks) => IBadge;
+  createBadge?: (callbacks: BadgeCallbacks) => IBadge
 }
 
 export interface BadgeCallbacks {
-  onToggle: (checked: boolean) => void;
-  onScrollGuardToggle: (enabled: boolean) => void;
-  onDetectionModeChange: (mode: TDetectionMode) => void;
-  onReloadNavigationToggle: (enabled: boolean) => void;
-  onHighlightColorChange: (target: THighlightColorTarget, color: string) => void;
-  onHighlightColorReset: (target: THighlightColorTarget) => void;
-  onHighlightOpacityChange: (value: number) => void;
-  onHighlightOpacityReset: () => void;
-  onCustomKeywordsChange: (keywords: string[]) => void;
+  onToggle: (checked: boolean) => void
+  onScrollGuardToggle: (enabled: boolean) => void
+  onDetectionModeChange: (mode: TDetectionMode) => void
+  onReloadNavigationToggle: (enabled: boolean) => void
+  onHighlightColorChange: (target: THighlightColorTarget, color: string) => void
+  onHighlightColorReset: (target: THighlightColorTarget) => void
+  onHighlightOpacityChange: (value: number) => void
+  onHighlightOpacityReset: () => void
+  onCustomKeywordsChange: (keywords: string[]) => void
 }
 
 /**
  * Main application orchestrator that wires all services together.
  */
 export class App {
-  private static readonly PAGINATION_COOLDOWN_CLASS = 'lhvj-pagination-cooldown';
-  private static readonly COUNT_COOLDOWN_STEP = 20;
+  private static readonly PAGINATION_COOLDOWN_CLASS = 'lhvj-pagination-cooldown'
+  private static readonly COUNT_COOLDOWN_STEP = 20
 
-  private readonly storage: IStorageService;
-  private readonly matcher: KeywordMatcher;
-  private readonly detection: DetectionService;
-  private readonly styleManager: StyleManager;
-  private readonly badge: Badge | null;
-  private readonly router: RouterService;
-  private readonly showBadge: boolean;
+  private readonly storage: IStorageService
+  private readonly matcher: KeywordMatcher
+  private readonly detection: DetectionService
+  private readonly styleManager: StyleManager
+  private readonly badge: Badge | null
+  private readonly router: RouterService
+  private readonly showBadge: boolean
 
-  private showHidden: boolean;
-  private scrollGuardEnabled: boolean;
-  private detectionMode: TDetectionMode;
-  private reloadOnNavigationEnabled: boolean;
-  private highlightColors: IHighlightColors;
-  private highlightOpacity: number;
-  private customKeywords: string[] = [];
-  private hiddenCount = 0;
-  private detectedCount = 0;
-  private keywordCount = 0;
-  private rafId = 0;
-  private isRuntimeActive = false;
-  private isReloadingForPathChange = false;
-  private lastRouteChangeAt = Date.now();
-  private isCooldownActive = false;
-  private cooldownUntil = 0;
-  private lastControlledScrollAt = 0;
-  private touchLastY: number | null = null;
-  private lastObservedScrollY = 0;
-  private lastObservedScrollAt = Date.now();
-  private isAdjustingNativeScroll = false;
-  private countGrowthSinceCooldown = 0;
+  private showHidden: boolean
+  private scrollGuardEnabled: boolean
+  private detectionMode: TDetectionMode
+  private reloadOnNavigationEnabled: boolean
+  private highlightColors: IHighlightColors
+  private highlightOpacity: number
+  private customKeywords: string[] = []
+  private hiddenCount = 0
+  private detectedCount = 0
+  private keywordCount = 0
+  private rafId = 0
+  private isRuntimeActive = false
+  private isReloadingForPathChange = false
+  private lastRouteChangeAt = Date.now()
+  private isCooldownActive = false
+  private cooldownUntil = 0
+  private lastControlledScrollAt = 0
+  private touchLastY: number | null = null
+  private lastObservedScrollY = 0
+  private lastObservedScrollAt = Date.now()
+  private isAdjustingNativeScroll = false
+  private countGrowthSinceCooldown = 0
 
   constructor(storage: IStorageService, options?: AppOptions) {
-    this.storage = storage;
-    this.showBadge = options?.showBadge !== false;
-    this.customKeywords = this.storage.getCustomKeywords();
-    this.matcher = new KeywordMatcher(this.customKeywords);
-    this.detection = new DetectionService(this.matcher);
-    this.styleManager = new StyleManager();
-    this.showHidden = this.storage.getShowHidden();
-    this.scrollGuardEnabled = this.storage.getScrollGuardEnabled();
-    this.detectionMode = this.storage.getDetectionMode();
-    this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation();
-    this.highlightColors = this.storage.getHighlightColors();
-    this.highlightOpacity = this.storage.getHighlightOpacity();
+    this.storage = storage
+    this.showBadge = options?.showBadge !== false
+    this.customKeywords = this.storage.getCustomKeywords()
+    this.matcher = new KeywordMatcher(this.customKeywords)
+    this.detection = new DetectionService(this.matcher)
+    this.styleManager = new StyleManager()
+    this.showHidden = this.storage.getShowHidden()
+    this.scrollGuardEnabled = this.storage.getScrollGuardEnabled()
+    this.detectionMode = this.storage.getDetectionMode()
+    this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation()
+    this.highlightColors = this.storage.getHighlightColors()
+    this.highlightOpacity = this.storage.getHighlightOpacity()
 
     if (this.showBadge && options?.createBadge) {
       this.badge = options.createBadge({
         onToggle: (checked) => {
-          this.showHidden = checked;
-          this.storage.setShowHidden(checked);
+          this.showHidden = checked
+          this.storage.setShowHidden(checked)
           if (!checked) {
-            this.resetScrollCooldown();
-            this.resetCountBasedCooldownProgress();
+            this.resetScrollCooldown()
+            this.resetCountBasedCooldownProgress()
           }
-          this.scheduleRefresh();
+          this.scheduleRefresh()
         },
         onScrollGuardToggle: (enabled) => {
-          this.scrollGuardEnabled = enabled;
-          this.storage.setScrollGuardEnabled(enabled);
+          this.scrollGuardEnabled = enabled
+          this.storage.setScrollGuardEnabled(enabled)
           if (!enabled) {
-            this.resetScrollCooldown();
-            this.resetCountBasedCooldownProgress();
+            this.resetScrollCooldown()
+            this.resetCountBasedCooldownProgress()
           }
-          this.scheduleRefresh();
+          this.scheduleRefresh()
         },
         onDetectionModeChange: (mode) => {
-          this.detectionMode = mode;
-          this.storage.setDetectionMode(mode);
-          this.scheduleRefresh();
+          this.detectionMode = mode
+          this.storage.setDetectionMode(mode)
+          this.scheduleRefresh()
         },
         onReloadNavigationToggle: (enabled) => {
-          this.reloadOnNavigationEnabled = enabled;
-          this.storage.setReloadNavigation(enabled);
+          this.reloadOnNavigationEnabled = enabled
+          this.storage.setReloadNavigation(enabled)
         },
         onHighlightColorChange: (state, color) => {
-          this.updateHighlightColor(state, color);
+          this.updateHighlightColor(state, color)
         },
         onHighlightColorReset: (state) => {
-          this.resetHighlightColor(state);
+          this.resetHighlightColor(state)
         },
         onHighlightOpacityChange: (value) => {
-          this.updateHighlightOpacity(value);
+          this.updateHighlightOpacity(value)
         },
         onHighlightOpacityReset: () => {
-          this.resetHighlightOpacity();
+          this.resetHighlightOpacity()
         },
         onCustomKeywordsChange: (keywords) => {
-          this.updateCustomKeywords(keywords);
-        },
-      });
+          this.updateCustomKeywords(keywords)
+        }
+      })
     } else {
-      this.badge = null;
+      this.badge = null
     }
 
     this.router = new RouterService(
       () => this.scheduleRefresh(),
       () => this.hardRestartRuntimeForPathChange()
-    );
+    )
   }
 
   /** Bootstrap the userscript */
   init(): void {
-    this.styleManager.inject(this.getHighlightSettings());
-    this.startRuntime();
-    this.router.startObserving();
+    this.styleManager.inject(this.getHighlightSettings())
+    this.startRuntime()
+    this.router.startObserving()
   }
 
   /** Reload settings from storage — called when chrome.storage changes externally */
   refreshSettings(): void {
-    const previousMode = this.detectionMode;
-    const previousScrollGuard = this.scrollGuardEnabled;
-    const previousShowHidden = this.showHidden;
+    const previousMode = this.detectionMode
+    const previousScrollGuard = this.scrollGuardEnabled
+    const previousShowHidden = this.showHidden
 
-    this.showHidden = this.storage.getShowHidden();
-    this.scrollGuardEnabled = this.storage.getScrollGuardEnabled();
-    this.detectionMode = this.storage.getDetectionMode();
-    this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation();
-    this.highlightColors = this.storage.getHighlightColors();
-    this.highlightOpacity = this.storage.getHighlightOpacity();
-    this.customKeywords = this.storage.getCustomKeywords();
-    this.matcher.setCustomKeywords(this.customKeywords);
-    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
+    this.showHidden = this.storage.getShowHidden()
+    this.scrollGuardEnabled = this.storage.getScrollGuardEnabled()
+    this.detectionMode = this.storage.getDetectionMode()
+    this.reloadOnNavigationEnabled = this.storage.getReloadOnNavigation()
+    this.highlightColors = this.storage.getHighlightColors()
+    this.highlightOpacity = this.storage.getHighlightOpacity()
+    this.customKeywords = this.storage.getCustomKeywords()
+    this.matcher.setCustomKeywords(this.customKeywords)
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings())
 
     if (previousMode !== this.detectionMode) {
-      this.clearDetectedVisualState();
+      this.clearDetectedVisualState()
     }
 
     // Reset cooldowns if extension or scroll guard is turned OFF
@@ -173,11 +173,11 @@ export class App {
       (previousShowHidden && !this.showHidden) ||
       (previousScrollGuard && !this.scrollGuardEnabled)
     ) {
-      this.resetScrollCooldown();
-      this.resetCountBasedCooldownProgress();
+      this.resetScrollCooldown()
+      this.resetCountBasedCooldownProgress()
     }
 
-    this.scheduleRefresh();
+    this.scheduleRefresh()
   }
 
   /** Get current stats — used by extension popup */
@@ -185,96 +185,96 @@ export class App {
     return {
       hiddenCount: this.detectedCount,
       isJobsPage: this.detection.isJobsPage(),
-      cooldownSecondsLeft: this.getCooldownSecondsLeft(),
-    };
+      cooldownSecondsLeft: this.getCooldownSecondsLeft()
+    }
   }
 
   // ── Runtime lifecycle ────────────────────────────────────────────────
 
   private startRuntime(): void {
-    if (this.isRuntimeActive) return;
+    if (this.isRuntimeActive) return
 
-    this.lastRouteChangeAt = Date.now();
-    this.lastObservedScrollY = window.scrollY;
-    this.lastObservedScrollAt = Date.now();
-    this.router.restartDomObserver();
-    this.scheduleRefresh();
-    this.router.queueRefresh(120);
-    this.router.queueRefresh(420);
+    this.lastRouteChangeAt = Date.now()
+    this.lastObservedScrollY = window.scrollY
+    this.lastObservedScrollAt = Date.now()
+    this.router.restartDomObserver()
+    this.scheduleRefresh()
+    this.router.queueRefresh(120)
+    this.router.queueRefresh(420)
 
-    window.addEventListener('resize', this.onWindowResize);
-    window.addEventListener('scroll', this.onWindowScroll, { passive: true, capture: true });
-    window.addEventListener('wheel', this.onWheel, { passive: false, capture: true });
-    window.addEventListener('mousedown', this.onMouseDown, { capture: true });
-    window.addEventListener('auxclick', this.onAuxClick, { capture: true });
-    window.addEventListener('keydown', this.onKeyDown, { passive: false, capture: true });
-    window.addEventListener('touchstart', this.onTouchStart, { passive: true });
-    window.addEventListener('touchmove', this.onTouchMove, { passive: false, capture: true });
-    window.addEventListener('touchend', this.onTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', this.onTouchEnd, { passive: true });
-    this.isRuntimeActive = true;
+    window.addEventListener('resize', this.onWindowResize)
+    window.addEventListener('scroll', this.onWindowScroll, { passive: true, capture: true })
+    window.addEventListener('wheel', this.onWheel, { passive: false, capture: true })
+    window.addEventListener('mousedown', this.onMouseDown, { capture: true })
+    window.addEventListener('auxclick', this.onAuxClick, { capture: true })
+    window.addEventListener('keydown', this.onKeyDown, { passive: false, capture: true })
+    window.addEventListener('touchstart', this.onTouchStart, { passive: true })
+    window.addEventListener('touchmove', this.onTouchMove, { passive: false, capture: true })
+    window.addEventListener('touchend', this.onTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', this.onTouchEnd, { passive: true })
+    this.isRuntimeActive = true
 
     if (this.detection.isJobsPage()) {
-      this.router.startRouteRefreshBurst();
+      this.router.startRouteRefreshBurst()
     }
   }
 
   private hardRestartRuntimeForPathChange(): void {
     // In OFF mode, or when the setting is disabled, keep SPA route changes as soft refreshes.
     if (!this.showHidden || !this.reloadOnNavigationEnabled) {
-      this.lastRouteChangeAt = Date.now();
-      this.router.restartDomObserver();
-      this.scheduleRefresh();
-      this.router.queueRefresh(120);
-      this.router.queueRefresh(420);
-      return;
+      this.lastRouteChangeAt = Date.now()
+      this.router.restartDomObserver()
+      this.scheduleRefresh()
+      this.router.queueRefresh(120)
+      this.router.queueRefresh(420)
+      return
     }
 
-    if (this.isReloadingForPathChange) return;
-    this.isReloadingForPathChange = true;
-    window.location.reload();
+    if (this.isReloadingForPathChange) return
+    this.isReloadingForPathChange = true
+    window.location.reload()
   }
 
   // ── Refresh cycle ────────────────────────────────────────────────────
 
   private scheduleRefresh(): void {
-    if (this.rafId) cancelAnimationFrame(this.rafId);
+    if (this.rafId) cancelAnimationFrame(this.rafId)
 
     this.rafId = requestAnimationFrame(() => {
-      this.rafId = 0;
-      this.refresh();
-    });
+      this.rafId = 0
+      this.refresh()
+    })
   }
 
   private refresh(): void {
-    this.syncCooldownState();
-    this.syncPaginationCooldownClass();
-    const previousHiddenCount = this.hiddenCount;
+    this.syncCooldownState()
+    this.syncPaginationCooldownClass()
+    const previousHiddenCount = this.hiddenCount
 
     if (!this.detection.isJobsPage()) {
-      this.hiddenCount = 0;
-      this.detectedCount = 0;
-      this.keywordCount = 0;
-      this.resetScrollCooldown();
-      this.resetCountBasedCooldownProgress();
-      this.badge?.remove();
-      return;
+      this.hiddenCount = 0
+      this.detectedCount = 0
+      this.keywordCount = 0
+      this.resetScrollCooldown()
+      this.resetCountBasedCooldownProgress()
+      this.badge?.remove()
+      return
     }
 
     if (!this.showHidden) {
-      this.hiddenCount = 0;
-      this.detectedCount = 0;
-      this.keywordCount = 0;
-      this.resetScrollCooldown();
-      this.resetCountBasedCooldownProgress();
-      this.clearDetectedVisualState();
+      this.hiddenCount = 0
+      this.detectedCount = 0
+      this.keywordCount = 0
+      this.resetScrollCooldown()
+      this.resetCountBasedCooldownProgress()
+      this.clearDetectedVisualState()
       this.badge?.ensure(
         this.showHidden,
         this.scrollGuardEnabled,
         this.detectionMode,
         this.reloadOnNavigationEnabled,
         this.getHighlightSettings()
-      );
+      )
       this.badge?.updateCount(
         0,
         this.showHidden,
@@ -284,127 +284,127 @@ export class App {
         this.getHighlightSettings(),
         0,
         0
-      );
-      return;
+      )
+      return
     }
 
     if (!this.isCountCooldownPage()) {
-      this.resetCountBasedCooldownProgress();
+      this.resetCountBasedCooldownProgress()
     }
 
-    const cards = this.detection.getJobCards();
+    const cards = this.detection.getJobCards()
 
     // Retry briefly after navigation because LinkedIn can render cards lazily
     if (cards.length === 0 && Date.now() - this.lastRouteChangeAt < CONFIG.LAZY_RENDER_TIMEOUT_MS) {
-      this.router.queueRefresh(180);
-      this.router.queueRefresh(600);
+      this.router.queueRefresh(180)
+      this.router.queueRefresh(600)
     }
 
-    const detectedCardsFromMarkers = this.detection.getDetectedCardsFromMarkers();
-    const detectedCards = new Map(detectedCardsFromMarkers);
+    const detectedCardsFromMarkers = this.detection.getDetectedCardsFromMarkers()
+    const detectedCards = new Map(detectedCardsFromMarkers)
 
     // Fallback: card-level scan
     for (const card of cards) {
-      const state = this.detection.getDetectedJobState(card);
+      const state = this.detection.getDetectedJobState(card)
       if (state) {
-        this.setDetectedState(detectedCards, card, state);
+        this.setDetectedState(detectedCards, card, state)
       }
     }
 
-    const shouldHideDetected = this.detectionMode === 'hide';
-    const anchorResult = this.detection.refreshDetectedAnchors(shouldHideDetected);
-    const fallbackCards = this.detection.refreshDetectedCardsFallback(shouldHideDetected);
-    const finalDetectedCards = new Map(detectedCards);
+    const shouldHideDetected = this.detectionMode === 'hide'
+    const anchorResult = this.detection.refreshDetectedAnchors(shouldHideDetected)
+    const fallbackCards = this.detection.refreshDetectedCardsFallback(shouldHideDetected)
+    const finalDetectedCards = new Map(detectedCards)
 
-    this.mergeDetectedCardStates(finalDetectedCards, anchorResult.detectedAnchorCards);
-    this.mergeDetectedCardStates(finalDetectedCards, fallbackCards);
+    this.mergeDetectedCardStates(finalDetectedCards, anchorResult.detectedAnchorCards)
+    this.mergeDetectedCardStates(finalDetectedCards, fallbackCards)
 
-    const cardSet = new Set(cards);
-    const activeCards = this.detection.getActiveCards(cardSet);
+    const cardSet = new Set(cards)
+    const activeCards = this.detection.getActiveCards(cardSet)
 
     // Custom-keyword matching is independent of viewed/applied detection: it
     // scans every keyword-candidate card on the page, including discovery /
     // recommended cards that were never viewed or applied to.
-    const keywordMatchedCards = new Set<HTMLElement>();
+    const keywordMatchedCards = new Set<HTMLElement>()
     if (this.customKeywords.length > 0) {
       for (const card of this.detection.getKeywordCandidateCards()) {
         if (this.matcher.matchCustomKeywordsFromElement(card)) {
-          keywordMatchedCards.add(card);
+          keywordMatchedCards.add(card)
         }
       }
     }
 
     for (const card of cards) {
-      const state = finalDetectedCards.get(card) ?? null;
-      const isKeywordMatched = keywordMatchedCards.has(card);
-      this.detection.applyVisibility(card, (!!state || isKeywordMatched) && shouldHideDetected);
-      this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
-      this.detection.applyActiveHighlight(card, activeCards.has(card));
-      this.detection.applyKeywordHighlight(card, !shouldHideDetected && isKeywordMatched);
+      const state = finalDetectedCards.get(card) ?? null
+      const isKeywordMatched = keywordMatchedCards.has(card)
+      this.detection.applyVisibility(card, (!!state || isKeywordMatched) && shouldHideDetected)
+      this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state)
+      this.detection.applyActiveHighlight(card, activeCards.has(card))
+      this.detection.applyKeywordHighlight(card, !shouldHideDetected && isKeywordMatched)
     }
 
     finalDetectedCards.forEach((state, card) => {
-      if (cardSet.has(card)) return;
-      const isKeywordMatched = keywordMatchedCards.has(card);
-      this.detection.applyVisibility(card, shouldHideDetected);
-      this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state);
-      this.detection.applyActiveHighlight(card, activeCards.has(card));
-      this.detection.applyKeywordHighlight(card, !shouldHideDetected && isKeywordMatched);
-    });
+      if (cardSet.has(card)) return
+      const isKeywordMatched = keywordMatchedCards.has(card)
+      this.detection.applyVisibility(card, shouldHideDetected)
+      this.detection.applyDetectedHighlight(card, shouldHideDetected ? null : state)
+      this.detection.applyActiveHighlight(card, activeCards.has(card))
+      this.detection.applyKeywordHighlight(card, !shouldHideDetected && isKeywordMatched)
+    })
 
     // Keyword-matched cards that are neither primary cards nor viewed/applied
     // (e.g. discovery cards that were never viewed) still need highlighting.
     keywordMatchedCards.forEach((card) => {
-      if (cardSet.has(card) || finalDetectedCards.has(card)) return;
-      this.detection.applyVisibility(card, shouldHideDetected);
-      this.detection.applyActiveHighlight(card, activeCards.has(card));
-      this.detection.applyKeywordHighlight(card, !shouldHideDetected);
-    });
+      if (cardSet.has(card) || finalDetectedCards.has(card)) return
+      this.detection.applyVisibility(card, shouldHideDetected)
+      this.detection.applyActiveHighlight(card, activeCards.has(card))
+      this.detection.applyKeywordHighlight(card, !shouldHideDetected)
+    })
 
     // Clean up stale card states
     document.querySelectorAll<HTMLElement>('[data-lhvj-hidden="1"]').forEach((node) => {
       const shouldStayHidden =
-        shouldHideDetected && (finalDetectedCards.has(node) || keywordMatchedCards.has(node));
+        shouldHideDetected && (finalDetectedCards.has(node) || keywordMatchedCards.has(node))
       if (!shouldStayHidden) {
-        this.detection.applyVisibility(node, false);
+        this.detection.applyVisibility(node, false)
       }
-    });
+    })
 
     document
       .querySelectorAll<HTMLElement>('[data-lhvj-viewed="1"], [data-lhvj-applied="1"]')
       .forEach((node) => {
         if (!finalDetectedCards.has(node) || shouldHideDetected) {
-          this.detection.applyDetectedHighlight(node, null);
+          this.detection.applyDetectedHighlight(node, null)
         }
-      });
+      })
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-active="1"]').forEach((node) => {
       if (!activeCards.has(node)) {
-        this.detection.applyActiveHighlight(node, false);
+        this.detection.applyActiveHighlight(node, false)
       }
-    });
+    })
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-keyword="1"]').forEach((node) => {
       if (shouldHideDetected || !keywordMatchedCards.has(node)) {
-        this.detection.applyKeywordHighlight(node, false);
+        this.detection.applyKeywordHighlight(node, false)
       }
-    });
+    })
 
-    this.hiddenCount = Math.max(finalDetectedCards.size, anchorResult.detectedAnchorCount);
+    this.hiddenCount = Math.max(finalDetectedCards.size, anchorResult.detectedAnchorCount)
 
-    this.keywordCount = keywordMatchedCards.size;
+    this.keywordCount = keywordMatchedCards.size
 
     // The badge's main count reflects every detected card the user cares about:
     // viewed/applied detections plus keyword matches, counted once per card.
-    const detectedUnion = new Set<HTMLElement>(keywordMatchedCards);
-    finalDetectedCards.forEach((_state, card) => detectedUnion.add(card));
+    const detectedUnion = new Set<HTMLElement>(keywordMatchedCards)
+    finalDetectedCards.forEach((_state, card) => detectedUnion.add(card))
     const anchorOnlyOverflow = Math.max(
       0,
       anchorResult.detectedAnchorCount - finalDetectedCards.size
-    );
-    this.detectedCount = detectedUnion.size + anchorOnlyOverflow;
+    )
+    this.detectedCount = detectedUnion.size + anchorOnlyOverflow
 
-    this.maybeStartCountBasedCooldown(previousHiddenCount);
+    this.maybeStartCountBasedCooldown(previousHiddenCount)
 
     this.badge?.ensure(
       this.showHidden,
@@ -412,7 +412,7 @@ export class App {
       this.detectionMode,
       this.reloadOnNavigationEnabled,
       this.getHighlightSettings()
-    );
+    )
     this.badge?.updateCount(
       this.detectedCount,
       this.showHidden,
@@ -422,69 +422,69 @@ export class App {
       this.getHighlightSettings(),
       this.getCooldownSecondsLeft(),
       this.keywordCount
-    );
+    )
   }
 
   private updateHighlightColor(target: THighlightColorTarget, color: string): void {
     if (target === 'viewed') {
-      this.storage.setViewedHighlightColor(color);
+      this.storage.setViewedHighlightColor(color)
     } else if (target === 'applied') {
-      this.storage.setAppliedHighlightColor(color);
+      this.storage.setAppliedHighlightColor(color)
     } else if (target === 'active') {
-      this.storage.setActiveHighlightColor(color);
+      this.storage.setActiveHighlightColor(color)
     } else {
-      this.storage.setKeywordHighlightColor(color);
+      this.storage.setKeywordHighlightColor(color)
     }
 
-    this.highlightColors = this.storage.getHighlightColors();
-    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
-    this.scheduleRefresh();
+    this.highlightColors = this.storage.getHighlightColors()
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings())
+    this.scheduleRefresh()
   }
 
   private resetHighlightColor(target: THighlightColorTarget): void {
     if (target === 'viewed') {
-      this.storage.resetViewedHighlightColor();
+      this.storage.resetViewedHighlightColor()
     } else if (target === 'applied') {
-      this.storage.resetAppliedHighlightColor();
+      this.storage.resetAppliedHighlightColor()
     } else if (target === 'active') {
-      this.storage.resetActiveHighlightColor();
+      this.storage.resetActiveHighlightColor()
     } else {
-      this.storage.resetKeywordHighlightColor();
+      this.storage.resetKeywordHighlightColor()
     }
 
-    this.highlightColors = this.storage.getHighlightColors();
-    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
-    this.scheduleRefresh();
+    this.highlightColors = this.storage.getHighlightColors()
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings())
+    this.scheduleRefresh()
   }
 
   private updateCustomKeywords(keywords: string[]): void {
-    this.storage.setCustomKeywords(keywords);
-    this.customKeywords = this.storage.getCustomKeywords();
-    this.matcher.setCustomKeywords(this.customKeywords);
-    this.scheduleRefresh();
-    setTimeout(() => this.scheduleRefresh(), 300);
-    setTimeout(() => this.scheduleRefresh(), 1000);
+    this.storage.setCustomKeywords(keywords)
+    this.customKeywords = this.storage.getCustomKeywords()
+    this.matcher.setCustomKeywords(this.customKeywords)
+    this.scheduleRefresh()
+    setTimeout(() => this.scheduleRefresh(), 300)
+    setTimeout(() => this.scheduleRefresh(), 1000)
   }
 
   private updateHighlightOpacity(value: number): void {
-    this.storage.setHighlightOpacity(value);
-    this.highlightOpacity = this.storage.getHighlightOpacity();
-    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
-    this.scheduleRefresh();
+    this.storage.setHighlightOpacity(value)
+    this.highlightOpacity = this.storage.getHighlightOpacity()
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings())
+    this.scheduleRefresh()
   }
 
   private resetHighlightOpacity(): void {
-    this.storage.resetHighlightOpacity();
-    this.highlightOpacity = this.storage.getHighlightOpacity();
-    this.styleManager.updateHighlightStyles(this.getHighlightSettings());
-    this.scheduleRefresh();
+    this.storage.resetHighlightOpacity()
+    this.highlightOpacity = this.storage.getHighlightOpacity()
+    this.styleManager.updateHighlightStyles(this.getHighlightSettings())
+    this.scheduleRefresh()
   }
 
   private getHighlightSettings(): IHighlightSettings {
     return {
       colors: this.highlightColors,
-      opacity: this.highlightOpacity,
-    };
+      opacity: this.highlightOpacity
+    }
   }
 
   private mergeDetectedCardStates(
@@ -492,8 +492,8 @@ export class App {
     source: Map<HTMLElement, TDetectedJobState>
   ): void {
     source.forEach((state, card) => {
-      this.setDetectedState(target, card, state);
-    });
+      this.setDetectedState(target, card, state)
+    })
   }
 
   private setDetectedState(
@@ -501,49 +501,49 @@ export class App {
     card: HTMLElement,
     state: TDetectedJobState
   ): void {
-    const previous = map.get(card);
-    if (previous === 'applied') return;
+    const previous = map.get(card)
+    if (previous === 'applied') return
     if (state === 'applied' || !previous) {
-      map.set(card, state);
+      map.set(card, state)
     }
   }
 
   private onWindowResize = (): void => {
-    this.badge?.syncPositionWithinViewport();
-  };
+    this.badge?.syncPositionWithinViewport()
+  }
 
   private onWheel = (e: WheelEvent): void => {
-    if (e.deltaY <= 0) return;
+    if (e.deltaY <= 0) return
 
     const handled = this.handleScrollGuardInput(e.deltaY, () => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
+      e.preventDefault()
+      e.stopPropagation()
+    })
 
     if (handled) {
-      this.scheduleRefresh();
+      this.scheduleRefresh()
     }
-  };
+  }
 
   private onWindowScroll = (): void => {
-    const now = Date.now();
-    const currentY = window.scrollY;
-    const deltaY = currentY - this.lastObservedScrollY;
-    const elapsedMs = Math.max(1, now - this.lastObservedScrollAt);
+    const now = Date.now()
+    const currentY = window.scrollY
+    const deltaY = currentY - this.lastObservedScrollY
+    const elapsedMs = Math.max(1, now - this.lastObservedScrollAt)
 
     if (deltaY <= 0) {
-      this.lastObservedScrollY = currentY;
-      this.lastObservedScrollAt = now;
-      return;
+      this.lastObservedScrollY = currentY
+      this.lastObservedScrollAt = now
+      return
     }
 
     if (!this.shouldUseScrollGuard()) {
-      this.lastObservedScrollY = currentY;
-      this.lastObservedScrollAt = now;
-      return;
+      this.lastObservedScrollY = currentY
+      this.lastObservedScrollAt = now
+      return
     }
 
-    this.syncCooldownState();
+    this.syncCooldownState()
 
     // Middle-click auto-scroll bypasses wheel handlers; clamp native scroll jumps while cooldown is active.
     if (this.isCooldownActive && !this.isAdjustingNativeScroll) {
@@ -551,268 +551,268 @@ export class App {
         14,
         (CONFIG.SCROLL_GUARD_ALLOWED_STEP_PX * elapsedMs) /
           CONFIG.SCROLL_GUARD_ALLOWED_STEP_MIN_INTERVAL_MS
-      );
+      )
 
       if (deltaY > allowedDelta) {
-        const clampedY = this.lastObservedScrollY + allowedDelta;
-        this.isAdjustingNativeScroll = true;
-        window.scrollTo({ top: clampedY, behavior: 'auto' });
-        this.lastObservedScrollY = clampedY;
-        this.lastObservedScrollAt = now;
+        const clampedY = this.lastObservedScrollY + allowedDelta
+        this.isAdjustingNativeScroll = true
+        window.scrollTo({ top: clampedY, behavior: 'auto' })
+        this.lastObservedScrollY = clampedY
+        this.lastObservedScrollAt = now
 
         window.setTimeout(() => {
-          this.isAdjustingNativeScroll = false;
-        }, 0);
+          this.isAdjustingNativeScroll = false
+        }, 0)
 
-        this.scheduleRefresh();
-        return;
+        this.scheduleRefresh()
+        return
       }
     }
 
-    this.lastObservedScrollY = currentY;
-    this.lastObservedScrollAt = now;
-  };
+    this.lastObservedScrollY = currentY
+    this.lastObservedScrollAt = now
+  }
 
   private onMouseDown = (e: MouseEvent): void => {
-    if (e.button !== 1) return;
-    if (!this.shouldBlockMiddleMouseDuringCooldown()) return;
+    if (e.button !== 1) return
+    if (!this.shouldBlockMiddleMouseDuringCooldown()) return
 
-    e.preventDefault();
-    e.stopPropagation();
-  };
+    e.preventDefault()
+    e.stopPropagation()
+  }
 
   private onAuxClick = (e: MouseEvent): void => {
-    if (e.button !== 1) return;
-    if (!this.shouldBlockMiddleMouseDuringCooldown()) return;
+    if (e.button !== 1) return
+    if (!this.shouldBlockMiddleMouseDuringCooldown()) return
 
-    e.preventDefault();
-    e.stopPropagation();
-  };
+    e.preventDefault()
+    e.stopPropagation()
+  }
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (this.isEditableTarget(e.target)) return;
+    if (this.isEditableTarget(e.target)) return
 
-    const key = e.key;
-    let delta = 0;
+    const key = e.key
+    let delta = 0
 
     if (key === 'ArrowDown') {
-      delta = 96;
+      delta = 96
     } else if (key === 'PageDown') {
-      delta = Math.max(window.innerHeight * 0.85, 280);
+      delta = Math.max(window.innerHeight * 0.85, 280)
     } else if (key === ' ') {
-      if (e.shiftKey) return;
-      delta = Math.max(window.innerHeight * 0.85, 280);
+      if (e.shiftKey) return
+      delta = Math.max(window.innerHeight * 0.85, 280)
     }
 
-    if (delta <= 0) return;
+    if (delta <= 0) return
 
     const handled = this.handleScrollGuardInput(delta, () => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
+      e.preventDefault()
+      e.stopPropagation()
+    })
 
     if (handled) {
-      this.scheduleRefresh();
+      this.scheduleRefresh()
     }
-  };
+  }
 
   private onTouchStart = (e: TouchEvent): void => {
-    if (e.touches.length === 0) return;
-    this.touchLastY = e.touches[0].clientY;
-  };
+    if (e.touches.length === 0) return
+    this.touchLastY = e.touches[0].clientY
+  }
 
   private onTouchMove = (e: TouchEvent): void => {
-    if (e.touches.length === 0 || this.touchLastY === null) return;
-    const currentY = e.touches[0].clientY;
-    const delta = this.touchLastY - currentY;
-    this.touchLastY = currentY;
+    if (e.touches.length === 0 || this.touchLastY === null) return
+    const currentY = e.touches[0].clientY
+    const delta = this.touchLastY - currentY
+    this.touchLastY = currentY
 
-    if (delta <= 0) return;
+    if (delta <= 0) return
 
     const handled = this.handleScrollGuardInput(delta, () => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
+      e.preventDefault()
+      e.stopPropagation()
+    })
 
     if (handled) {
-      this.scheduleRefresh();
+      this.scheduleRefresh()
     }
-  };
+  }
 
   private onTouchEnd = (): void => {
-    this.touchLastY = null;
-  };
+    this.touchLastY = null
+  }
 
   private handleScrollGuardInput(deltaY: number, cancelDefault: () => void): boolean {
     if (!this.shouldUseScrollGuard()) {
-      return false;
+      return false
     }
 
-    this.syncCooldownState();
+    this.syncCooldownState()
 
     if (!this.isCooldownActive) {
-      return false;
+      return false
     }
 
     if (this.shouldLockScroll()) {
-      cancelDefault();
+      cancelDefault()
     }
 
-    this.applyControlledScroll(deltaY);
-    return true;
+    this.applyControlledScroll(deltaY)
+    return true
   }
 
   private shouldUseScrollGuard(): boolean {
-    if (!this.scrollGuardEnabled) return false;
-    if (!this.showHidden) return false;
-    return this.detection.isJobsPage();
+    if (!this.scrollGuardEnabled) return false
+    if (!this.showHidden) return false
+    return this.detection.isJobsPage()
   }
 
   private shouldLockScroll(): boolean {
-    return this.isCooldownActive && this.isJobsHomepage();
+    return this.isCooldownActive && this.isJobsHomepage()
   }
 
   private shouldBlockMiddleMouseDuringCooldown(): boolean {
-    return this.shouldLockScroll();
+    return this.shouldLockScroll()
   }
 
   private shouldUseCountBasedCooldown(): boolean {
-    if (!this.scrollGuardEnabled) return false;
-    if (!this.showHidden) return false;
-    return this.isCountCooldownPage();
+    if (!this.scrollGuardEnabled) return false
+    if (!this.showHidden) return false
+    return this.isCountCooldownPage()
   }
 
   private maybeStartCountBasedCooldown(previousHiddenCount: number): void {
-    if (!this.shouldUseCountBasedCooldown()) return;
+    if (!this.shouldUseCountBasedCooldown()) return
 
     if (this.hiddenCount > previousHiddenCount) {
-      this.countGrowthSinceCooldown += this.hiddenCount - previousHiddenCount;
+      this.countGrowthSinceCooldown += this.hiddenCount - previousHiddenCount
     }
 
-    if (this.countGrowthSinceCooldown < App.COUNT_COOLDOWN_STEP) return;
+    if (this.countGrowthSinceCooldown < App.COUNT_COOLDOWN_STEP) return
 
-    const triggerCount = Math.floor(this.countGrowthSinceCooldown / App.COUNT_COOLDOWN_STEP);
-    this.countGrowthSinceCooldown -= triggerCount * App.COUNT_COOLDOWN_STEP;
+    const triggerCount = Math.floor(this.countGrowthSinceCooldown / App.COUNT_COOLDOWN_STEP)
+    this.countGrowthSinceCooldown -= triggerCount * App.COUNT_COOLDOWN_STEP
 
     // Collapse burst triggers into a single running countdown timeline.
     for (let i = 0; i < triggerCount; i++) {
-      this.startRandomCooldown();
+      this.startRandomCooldown()
     }
   }
 
   private resetCountBasedCooldownProgress(): void {
-    this.countGrowthSinceCooldown = 0;
+    this.countGrowthSinceCooldown = 0
   }
 
   private isJobsHomepage(): boolean {
-    const path = location.pathname;
-    return path === '/jobs' || path === '/jobs/';
+    const path = location.pathname
+    return path === '/jobs' || path === '/jobs/'
   }
 
   private isCollectionsPage(): boolean {
-    return location.pathname.startsWith('/jobs/collections');
+    return location.pathname.startsWith('/jobs/collections')
   }
 
   private isCountCooldownPage(): boolean {
-    return this.isJobsHomepage() || this.isCollectionsPage();
+    return this.isJobsHomepage() || this.isCollectionsPage()
   }
 
   private startRandomCooldown(): void {
-    const minMs = CONFIG.SCROLL_GUARD_COOLDOWN_MIN_MS;
-    const maxMs = CONFIG.SCROLL_GUARD_COOLDOWN_MAX_MS;
-    const durationMs = minMs + Math.floor(Math.random() * (maxMs - minMs + 1));
+    const minMs = CONFIG.SCROLL_GUARD_COOLDOWN_MIN_MS
+    const maxMs = CONFIG.SCROLL_GUARD_COOLDOWN_MAX_MS
+    const durationMs = minMs + Math.floor(Math.random() * (maxMs - minMs + 1))
 
     if (this.isCooldownActive) {
-      this.cooldownUntil += durationMs;
+      this.cooldownUntil += durationMs
     } else {
-      this.isCooldownActive = true;
-      this.cooldownUntil = Date.now() + durationMs;
-      this.lastControlledScrollAt = 0;
-      this.syncPaginationCooldownClass();
+      this.isCooldownActive = true
+      this.cooldownUntil = Date.now() + durationMs
+      this.lastControlledScrollAt = 0
+      this.syncPaginationCooldownClass()
     }
 
-    const msUntilEnd = Math.max(0, this.cooldownUntil - Date.now());
+    const msUntilEnd = Math.max(0, this.cooldownUntil - Date.now())
 
     window.setTimeout(() => {
-      if (!this.isCooldownActive) return;
-      this.syncCooldownState();
-      this.scheduleRefresh();
-    }, msUntilEnd + 20);
+      if (!this.isCooldownActive) return
+      this.syncCooldownState()
+      this.scheduleRefresh()
+    }, msUntilEnd + 20)
   }
 
   private applyControlledScroll(deltaY: number): void {
-    const now = Date.now();
+    const now = Date.now()
     if (now - this.lastControlledScrollAt < CONFIG.SCROLL_GUARD_ALLOWED_STEP_MIN_INTERVAL_MS) {
-      return;
+      return
     }
 
-    const step = Math.min(Math.max(deltaY, 0), CONFIG.SCROLL_GUARD_ALLOWED_STEP_PX);
-    if (step <= 0) return;
+    const step = Math.min(Math.max(deltaY, 0), CONFIG.SCROLL_GUARD_ALLOWED_STEP_PX)
+    if (step <= 0) return
 
-    window.scrollBy({ top: step, behavior: 'auto' });
-    this.lastControlledScrollAt = now;
+    window.scrollBy({ top: step, behavior: 'auto' })
+    this.lastControlledScrollAt = now
   }
 
   private syncCooldownState(): void {
-    if (!this.isCooldownActive) return;
-    if (Date.now() < this.cooldownUntil) return;
-    this.resetScrollCooldown();
+    if (!this.isCooldownActive) return
+    if (Date.now() < this.cooldownUntil) return
+    this.resetScrollCooldown()
   }
 
   private resetScrollCooldown(): void {
-    this.isCooldownActive = false;
-    this.cooldownUntil = 0;
-    this.lastControlledScrollAt = 0;
-    this.isAdjustingNativeScroll = false;
-    this.syncPaginationCooldownClass();
+    this.isCooldownActive = false
+    this.cooldownUntil = 0
+    this.lastControlledScrollAt = 0
+    this.isAdjustingNativeScroll = false
+    this.syncPaginationCooldownClass()
   }
 
   private getCooldownSecondsLeft(): number {
-    if (!this.isCooldownActive) return 0;
-    const msLeft = this.cooldownUntil - Date.now();
-    if (msLeft <= 0) return 0;
-    return Math.ceil(msLeft / 1000);
+    if (!this.isCooldownActive) return 0
+    const msLeft = this.cooldownUntil - Date.now()
+    if (msLeft <= 0) return 0
+    return Math.ceil(msLeft / 1000)
   }
 
   private isEditableTarget(target: EventTarget | null): boolean {
-    if (!(target instanceof HTMLElement)) return false;
-    if (target.isContentEditable) return true;
-    return !!target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]');
+    if (!(target instanceof HTMLElement)) return false
+    if (target.isContentEditable) return true
+    return !!target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')
   }
 
   private clearDetectedVisualState(): void {
-    const { HIDDEN_CLASS } = DOM_IDS;
+    const { HIDDEN_CLASS } = DOM_IDS
     document.querySelectorAll<HTMLElement>('[data-lhvj-hidden="1"]').forEach((node) => {
-      this.detection.applyVisibility(node, false);
-    });
+      this.detection.applyVisibility(node, false)
+    })
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-viewed="1"]').forEach((node) => {
-      this.detection.applyDetectedHighlight(node, null);
-    });
+      this.detection.applyDetectedHighlight(node, null)
+    })
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-applied="1"]').forEach((node) => {
-      this.detection.applyDetectedHighlight(node, null);
-    });
+      this.detection.applyDetectedHighlight(node, null)
+    })
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-active="1"]').forEach((node) => {
-      this.detection.applyActiveHighlight(node, false);
-    });
+      this.detection.applyActiveHighlight(node, false)
+    })
 
     document.querySelectorAll<HTMLElement>('[data-lhvj-keyword="1"]').forEach((node) => {
-      this.detection.applyKeywordHighlight(node, false);
-    });
+      this.detection.applyKeywordHighlight(node, false)
+    })
 
     document.querySelectorAll<HTMLElement>('a[data-lhvj-hidden-anchor="1"]').forEach((node) => {
-      node.classList.remove(HIDDEN_CLASS);
-      node.removeAttribute('data-lhvj-hidden-anchor');
-    });
+      node.classList.remove(HIDDEN_CLASS)
+      node.removeAttribute('data-lhvj-hidden-anchor')
+    })
   }
 
   private syncPaginationCooldownClass(): void {
-    const root = document.documentElement;
-    if (!root) return;
+    const root = document.documentElement
+    if (!root) return
 
-    const shouldDisablePagination = this.isCooldownActive && this.detection.isJobsPage();
-    root.classList.toggle(App.PAGINATION_COOLDOWN_CLASS, shouldDisablePagination);
+    const shouldDisablePagination = this.isCooldownActive && this.detection.isJobsPage()
+    root.classList.toggle(App.PAGINATION_COOLDOWN_CLASS, shouldDisablePagination)
   }
 }

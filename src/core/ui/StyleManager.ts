@@ -1,34 +1,34 @@
-import { CONFIG, DOM_IDS } from '../constants';
-import type { IHighlightSettings } from '../types';
+import { CONFIG, DOM_IDS } from '../constants'
+import type { IHighlightSettings } from '../types'
 
 /**
  * Injects and manages all CSS styles for the userscript.
  */
 export class StyleManager {
-  private styleEl: HTMLStyleElement | null = null;
+  private styleEl: HTMLStyleElement | null = null
 
   inject(settings: IHighlightSettings): void {
-    const existing = document.getElementById('lhvj-style') as HTMLStyleElement | null;
+    const existing = document.getElementById('lhvj-style') as HTMLStyleElement | null
     if (existing) {
-      this.styleEl = existing;
-      this.styleEl.textContent = this.buildCSS(settings);
-      return;
+      this.styleEl = existing
+      this.styleEl.textContent = this.buildCSS(settings)
+      return
     }
 
-    const style = document.createElement('style');
-    style.id = 'lhvj-style';
-    style.textContent = this.buildCSS(settings);
-    document.head.appendChild(style);
-    this.styleEl = style;
+    const style = document.createElement('style')
+    style.id = 'lhvj-style'
+    style.textContent = this.buildCSS(settings)
+    document.head.appendChild(style)
+    this.styleEl = style
   }
 
   updateHighlightStyles(settings: IHighlightSettings): void {
     if (!this.styleEl || !document.head.contains(this.styleEl)) {
-      this.inject(settings);
-      return;
+      this.inject(settings)
+      return
     }
 
-    this.styleEl.textContent = this.buildCSS(settings);
+    this.styleEl.textContent = this.buildCSS(settings)
   }
 
   private buildCSS(settings: IHighlightSettings): string {
@@ -38,13 +38,13 @@ export class StyleManager {
       VIEWED_HIGHLIGHT_CLASS,
       APPLIED_HIGHLIGHT_CLASS,
       ACTIVE_HIGHLIGHT_CLASS,
-      KEYWORD_HIGHLIGHT_CLASS,
-    } = DOM_IDS;
-    const { UI_Z_INDEX, HIGHLIGHT_BORDER_RADIUS } = CONFIG;
-    const viewedBackground = this.withAlpha(settings.colors.viewed, settings.opacity);
-    const appliedBackground = this.withAlpha(settings.colors.applied, settings.opacity);
-    const activeBackground = this.withAlpha(settings.colors.active, settings.opacity);
-    const keywordBackground = this.withAlpha(settings.colors.keyword, settings.opacity);
+      KEYWORD_HIGHLIGHT_CLASS
+    } = DOM_IDS
+    const { UI_Z_INDEX, HIGHLIGHT_BORDER_RADIUS } = CONFIG
+    const viewedBackground = this.withAlpha(settings.colors.viewed, settings.opacity)
+    const appliedBackground = this.withAlpha(settings.colors.applied, settings.opacity)
+    const activeBackground = this.withAlpha(settings.colors.active, settings.opacity)
+    const keywordBackground = this.withAlpha(settings.colors.keyword, settings.opacity)
 
     return /* css */ `
       .${HIDDEN_CLASS} {
@@ -642,14 +642,14 @@ export class StyleManager {
           grid-template-columns: minmax(0, 1fr);
         }
       }
-    `;
+    `
   }
 
   private withAlpha(hex: string, alpha: number): string {
-    const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : CONFIG.VIEWED_HIGHLIGHT_COLOR;
-    const red = parseInt(normalized.slice(1, 3), 16);
-    const green = parseInt(normalized.slice(3, 5), 16);
-    const blue = parseInt(normalized.slice(5, 7), 16);
-    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : CONFIG.VIEWED_HIGHLIGHT_COLOR
+    const red = parseInt(normalized.slice(1, 3), 16)
+    const green = parseInt(normalized.slice(3, 5), 16)
+    const blue = parseInt(normalized.slice(5, 7), 16)
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`
   }
 }

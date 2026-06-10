@@ -1,5 +1,5 @@
-import { TDetectionMode } from '../../core';
-import { IHighlightSettings } from '../../core/interfaces/IHighlightSettings';
+import { TDetectionMode } from '../../core'
+import { IHighlightSettings } from '../../core/interfaces/IHighlightSettings'
 
 /**
  * Minimal contract that the App orchestrator needs from the in-page badge UI.
@@ -13,7 +13,7 @@ export interface IBadge {
     detectionMode: TDetectionMode,
     reloadOnNavigation: boolean,
     highlightSettings: IHighlightSettings
-  ): void;
+  ): void
 
   updateCount(
     count: number,
@@ -24,9 +24,9 @@ export interface IBadge {
     highlightSettings: IHighlightSettings,
     cooldownSecondsLeft: number,
     keywordCount: number
-  ): void;
+  ): void
 
-  syncPositionWithinViewport(): void;
+  syncPositionWithinViewport(): void
 
-  remove(): void;
+  remove(): void
 }

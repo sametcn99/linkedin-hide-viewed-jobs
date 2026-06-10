@@ -39,8 +39,8 @@ export const VIEWED_KEYWORDS: readonly string[] = Object.freeze([
   // Arabic
   'تمت المشاهدة',
   // Hindi
-  'देखा गया',
-]);
+  'देखा गया'
+])
 
 export const APPLIED_KEYWORDS: readonly string[] = Object.freeze([
   // English
@@ -84,5 +84,5 @@ export const APPLIED_KEYWORDS: readonly string[] = Object.freeze([
   // Arabic
   'تم التقديم',
   // Hindi
-  'आवेदन किया गया',
-]);
+  'आवेदन किया गया'
+])

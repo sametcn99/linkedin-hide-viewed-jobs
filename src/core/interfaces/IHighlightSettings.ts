@@ -1,6 +1,6 @@
-import { IHighlightColors } from './IHighlightColors';
+import { IHighlightColors } from './IHighlightColors'
 
 export interface IHighlightSettings {
-  colors: IHighlightColors;
-  opacity: number;
+  colors: IHighlightColors
+  opacity: number
 }

@@ -1,1 +1,1 @@
-export type { IStorageService } from './IStorageService';
+export type { IStorageService } from './IStorageService'
