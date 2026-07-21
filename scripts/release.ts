@@ -34,18 +34,44 @@ async function checkPrerequisites(): Promise<{ version: string; tag: string; rep
 
 async function buildAll(): Promise<void> {
   console.log('\nBuilding userscript...')
-  await Bun.spawn(['bun', 'run', 'build'], { cwd: ROOT, stdout: 'inherit' }).exited
+  const buildResult = await Bun.spawn(['bun', 'run', 'build'], { cwd: ROOT, stdout: 'inherit' })
+    .exited
+  if (buildResult !== 0) {
+    console.error('Userscript build failed.')
+    process.exit(buildResult)
+  }
 
   console.log('Building extension...')
-  await Bun.spawn(['bun', 'run', 'build:extension'], { cwd: ROOT, stdout: 'inherit' }).exited
+  const extBuildResult = await Bun.spawn(['bun', 'run', 'build:extension'], {
+    cwd: ROOT,
+    stdout: 'inherit'
+  }).exited
+  if (extBuildResult !== 0) {
+    console.error('Extension build failed.')
+    process.exit(extBuildResult)
+  }
 }
 
 async function packageAll(): Promise<void> {
   console.log('\nPackaging Chrome extension...')
-  await Bun.spawn(['bun', 'run', 'package:chrome'], { cwd: ROOT, stdout: 'inherit' }).exited
+  const chromeResult = await Bun.spawn(['bun', 'run', 'package:chrome'], {
+    cwd: ROOT,
+    stdout: 'inherit'
+  }).exited
+  if (chromeResult !== 0) {
+    console.error('Chrome extension packaging failed.')
+    process.exit(chromeResult)
+  }
 
   console.log('Packaging Firefox extension...')
-  await Bun.spawn(['bun', 'run', 'package:firefox'], { cwd: ROOT, stdout: 'inherit' }).exited
+  const firefoxResult = await Bun.spawn(['bun', 'run', 'package:firefox'], {
+    cwd: ROOT,
+    stdout: 'inherit'
+  }).exited
+  if (firefoxResult !== 0) {
+    console.error('Firefox extension packaging failed.')
+    process.exit(firefoxResult)
+  }
 }
 
 async function main(): Promise<void> {

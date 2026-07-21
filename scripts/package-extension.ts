@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 import { platform } from 'os'
-import { existsSync } from 'fs'
+import { existsSync, rmSync } from 'fs'
 
 const ROOT = import.meta.dir.replace(/[\\/]scripts$/, '').replace(/\\/g, '/')
 
@@ -27,6 +27,12 @@ async function packageExtension(browser: 'chrome' | 'firefox'): Promise<void> {
 
   console.log(`\nPackaging ${browser.toUpperCase()} extension...`)
 
+  // Delete existing zip first to prevent IOException on Windows and stale file appending on Unix
+  if (existsSync(zipName)) {
+    console.log(`  Deleting existing archive: ${zipName}`)
+    rmSync(zipName, { force: true })
+  }
+
   if (platform() === 'win32') {
     // Use .NET ZipFile for standard Windows zip archives (Chrome Web Store compatible)
     const distDirWin = distDir.replace(/\//g, '\\')
@@ -42,7 +48,7 @@ async function packageExtension(browser: 'chrome' | 'firefox'): Promise<void> {
     )
   } else {
     // Use zip on Unix-like systems
-    await run('sh', ['-c', `cd ${distDir} && zip -r ${zipName} .`], ROOT)
+    await run('zip', ['-r', zipName, '.'], distDir)
   }
 
   console.log(`  ${browser.toUpperCase()} extension packaged → ${zipName}`)

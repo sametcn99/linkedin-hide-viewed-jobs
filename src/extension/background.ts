@@ -29,8 +29,7 @@ function openPopupWindow() {
   const popupUrl = chrome.runtime.getURL('popup.html')
   chrome.storage.local.get(POPUP_BOUNDS_KEY, (result) => {
     const bounds = result[POPUP_BOUNDS_KEY] as
-      | { width: number; height: number; top: number; left: number }
-      | undefined
+      { width: number; height: number; top: number; left: number } | undefined
     const width = bounds?.width ?? DEFAULT_WIDTH
     const height = bounds?.height ?? DEFAULT_HEIGHT
     const top = bounds?.top ?? 100
