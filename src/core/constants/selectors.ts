@@ -1,3 +1,10 @@
+import { VIEWED_KEYWORDS } from './keywords'
+
+/** Generate aria-label selectors from keywords dynamically */
+const generateAriaLabelSelectors = (keywords: readonly string[]): string[] => {
+  return keywords.map((keyword) => `[aria-label*="${keyword}"]`)
+}
+
 export const JOB_CARD_SELECTORS: readonly string[] = Object.freeze([
   '[data-occludable-job-id]',
   'li[data-occludable-job-id]',
@@ -14,7 +21,10 @@ export const JOB_CARD_SELECTORS: readonly string[] = Object.freeze([
   'li.jobs-collection__list-item',
   'div.jobs-collection__list-item',
   '.jobs-collections-module__job-card',
-  '.jobs-collections-module__job-card-container'
+  '.jobs-collections-module__job-card-container',
+  // Search Results page (new design)
+  'div[componentkey^="job-card-component-ref-"]',
+  'div[role="button"][componentkey^="job-card"]'
 ])
 
 export const VIEWED_MARKER_SELECTORS: readonly string[] = Object.freeze([
@@ -25,7 +35,12 @@ export const VIEWED_MARKER_SELECTORS: readonly string[] = Object.freeze([
   '[class*="job-state"]',
   '[data-jobstate]',
   '[data-viewed="true"]',
-  'span.job-card-list__footer'
+  'span.job-card-list__footer',
+  // Search Results page (new design) - viewed indicators
+  'span[class*="viewed"]',
+  'span[data-test-viewed-state]',
+  // Dynamically generated aria-label selectors from VIEWED_KEYWORDS
+  ...generateAriaLabelSelectors(VIEWED_KEYWORDS)
 ])
 
 export const POTENTIAL_VIEWED_ANCHOR_SELECTORS: readonly string[] = Object.freeze([
@@ -39,7 +54,10 @@ export const POTENTIAL_VIEWED_ANCHOR_SELECTORS: readonly string[] = Object.freez
   'a[class*="job-card"]',
   'a.base-card__full-link',
   'a.jobs-collection-card__link',
-  'a.jobs-collections-module__link'
+  'a.jobs-collections-module__link',
+  // Search Results page (new design)
+  'a[href*="/jobs/search-results/"]',
+  'div[componentkey^="job-card"] a[href]'
 ])
 
 /** Pre-joined selector strings to avoid re-joining on every call */
@@ -63,5 +81,8 @@ export const EXTENDED_CARD_SELECTOR = [
   '.jobs-collections-module__job-card',
   '.jobs-collections-module__job-card-container',
   'li.jobs-collections-module__list-item',
-  'div.jobs-collections-module__list-item'
+  'div.jobs-collections-module__list-item',
+  // Search Results page (new design)
+  'div[componentkey^="job-card-component-ref-"]',
+  'div[role="button"][componentkey^="job-card"]'
 ].join(',')

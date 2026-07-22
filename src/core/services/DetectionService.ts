@@ -1,4 +1,4 @@
-import type { IAnchorDetectionResult, TDetectedJobState } from '../types'
+import type { TDetectedJobState } from '../types'
 import {
   CARD_SELECTOR_JOINED,
   MARKER_SELECTOR_JOINED,
@@ -7,6 +7,7 @@ import {
   DOM_IDS
 } from '../constants'
 import { KeywordMatcher } from './KeywordMatcher'
+import { IAnchorDetectionResult } from '../interfaces/IAnchorDetectionResult'
 
 /**
  * Handles all DOM detection logic for viewed job cards.
@@ -256,6 +257,10 @@ export class DetectionService {
     const fallback = node.closest<HTMLElement>(EXTENDED_CARD_SELECTOR)
     if (fallback) return fallback
 
+    // Search Results page (new design) - card is parent div with componentkey
+    const searchResultsCard = node.closest<HTMLElement>('div[componentkey^="job-card"]')
+    if (searchResultsCard) return searchResultsCard
+
     if (
       node.matches(
         'a[href*="/jobs/view/"], a[href*="/jobs/collections/"], a[href*="currentJobId="]'
@@ -305,6 +310,7 @@ export class DetectionService {
         href.includes('/jobs/collections/') ||
         href.includes('/jobs/collections/recommended') ||
         href.includes('/jobs/search/') ||
+        href.includes('/jobs/search-results/') ||
         href.includes('currentJobId=') ||
         href.includes('trk=public_jobs')
       ) {
@@ -319,6 +325,13 @@ export class DetectionService {
     document.querySelectorAll<HTMLElement>('a[data-lhvj-hidden-anchor="1"]').forEach((node) => {
       anchorSet.add(node)
     })
+
+    // Search Results page (new design) - find anchors inside job cards
+    document
+      .querySelectorAll<HTMLElement>('div[componentkey^="job-card"] a[href]')
+      .forEach((node) => {
+        anchorSet.add(node)
+      })
 
     return Array.from(anchorSet)
   }
